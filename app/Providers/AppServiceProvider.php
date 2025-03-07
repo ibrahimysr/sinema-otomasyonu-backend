@@ -39,6 +39,21 @@ class AppServiceProvider extends ServiceProvider
             );
         });
         
+        $this->app->bind(\App\Repositories\MovieRepository::class, function ($app) {
+            return new \App\Repositories\MovieRepository($app->make(\App\Models\Movie::class));
+        });
+        
+        $this->app->singleton(\App\Services\OmdbApiService::class, function ($app) {
+            return new \App\Services\OmdbApiService('4ad67668');
+        });
+        
+        $this->app->bind(\App\Services\MovieService::class, function ($app) {
+            return new \App\Services\MovieService(
+                $app->make(\App\Repositories\MovieRepository::class),
+                $app->make(\App\Services\OmdbApiService::class)
+            );
+        });
+        
         $this->app->singleton(\App\Services\ResponseService::class, function ($app) {
             return new \App\Services\ResponseService();
         });

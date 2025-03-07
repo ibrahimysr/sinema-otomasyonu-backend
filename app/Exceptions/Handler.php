@@ -27,4 +27,39 @@ class Handler extends ExceptionHandler
             //
         });
     }
+
+    public function render($request, Throwable $exception)
+    {
+        if ($request->expectsJson()) {
+            if ($exception instanceof \Illuminate\Validation\ValidationException) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Doğrulama hatası',
+                    'errors' => $exception->errors()
+                ], 422);
+            }
+
+            if ($exception instanceof \Illuminate\Auth\AuthenticationException) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Kimlik doğrulama hatası'
+                ], 401);
+            }
+
+            if ($exception instanceof \Illuminate\Database\Eloquent\ModelNotFoundException) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Kayıt bulunamadı'
+                ], 404);
+            }
+
+            return response()->json([
+                'status' => 'error',
+                'message' => $exception->getMessage() ?: 'Bir hata oluştu',
+                'code' => $exception->getCode() ?: 500
+            ], 500);
+        }
+
+        return parent::render($request, $exception);
+    }
 }
