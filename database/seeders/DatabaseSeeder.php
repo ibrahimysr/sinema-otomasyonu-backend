@@ -11,5 +11,6 @@ class DatabaseSeeder extends Seeder
         $this->call(CitySeeder::class);
         $this->call(CinemaSeeder::class);
         $this->call(CinemaHallSeeder::class);
+        $this->call(SeatSeeder::class);
     }
 }

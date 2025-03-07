@@ -29,6 +29,16 @@ class AppServiceProvider extends ServiceProvider
             );
         });
         
+        $this->app->bind(\App\Repositories\SeatRepository::class, function ($app) {
+            return new \App\Repositories\SeatRepository($app->make(\App\Models\Seat::class));
+        });
+        
+        $this->app->bind(\App\Services\SeatService::class, function ($app) {
+            return new \App\Services\SeatService(
+                $app->make(\App\Repositories\SeatRepository::class)
+            );
+        });
+        
         $this->app->singleton(\App\Services\ResponseService::class, function ($app) {
             return new \App\Services\ResponseService();
         });

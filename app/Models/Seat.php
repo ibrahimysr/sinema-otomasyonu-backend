@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class CinemaHall extends Model
+class Seat extends Model
 {
     use HasFactory, SoftDeletes;
 
@@ -16,10 +16,9 @@ class CinemaHall extends Model
      * @var array
      */
     protected $fillable = [
-        'cinema_id',
-        'name',
-        'capacity',
-        'type',
+        'cinema_hall_id',
+        'seat_data',
+        'status',
     ];
 
     /**
@@ -28,26 +27,16 @@ class CinemaHall extends Model
      * @var array
      */
     protected $casts = [
-        'capacity' => 'integer',
+        'seat_data' => 'array',
     ];
 
     /**
-     * Salon'un ait olduğu sinema
+     * Koltuğun ait olduğu salon
      *
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
-    public function cinema()
+    public function cinemaHall()
     {
-        return $this->belongsTo(Cinema::class);
-    }
-
-    /**
-     * Salon'a ait koltuklar
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasOne
-     */
-    public function seats()
-    {
-        return $this->hasOne(Seat::class);
+        return $this->belongsTo(CinemaHall::class);
     }
 } 
