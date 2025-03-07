@@ -9,5 +9,7 @@ class DatabaseSeeder extends Seeder
     public function run()
     {
         $this->call(CitySeeder::class);
+        $this->call(CinemaSeeder::class);
+        $this->call(CinemaHallSeeder::class);
     }
 }

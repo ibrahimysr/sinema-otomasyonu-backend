@@ -49,10 +49,8 @@ class CinemaService
      */
     public function deleteCinema(int $id)
     {
-        // İlişkili kayıtları kontrol et
         $relatedRecords = $this->checkRelatedRecords($id);
         
-        // İlişkili kayıt varsa, silme işlemini yapma ve ilişkili kayıtları döndür
         if (!empty($relatedRecords)) {
             return [
                 'success' => false,
@@ -60,7 +58,6 @@ class CinemaService
             ];
         }
         
-        // İlişkili kayıt yoksa, soft delete yap
         return $this->cinemaRepository->delete($id);
     }
     
@@ -79,21 +76,11 @@ class CinemaService
             return $relatedRecords;
         }
         
-        // İleride eklenecek ilişkili tablolar için kontrol
-        // Örnek: Salonlar (Halls)
-        // if (class_exists('App\Models\Hall') && $cinema->halls()->count() > 0) {
-        //     $relatedRecords['halls'] = $cinema->halls()->count();
-        // }
+        if (class_exists('App\Models\CinemaHall') && $cinema->halls()->count() > 0) {
+            $relatedRecords['halls'] = $cinema->halls()->count();
+        }
         
-        // Örnek: Seanslar (Sessions)
-        // if (class_exists('App\Models\Session') && $cinema->sessions()->count() > 0) {
-        //     $relatedRecords['sessions'] = $cinema->sessions()->count();
-        // }
-        
-        // Örnek: Biletler (Tickets)
-        // if (class_exists('App\Models\Ticket') && $cinema->tickets()->count() > 0) {
-        //     $relatedRecords['tickets'] = $cinema->tickets()->count();
-        // }
+   
         
         return $relatedRecords;
     }

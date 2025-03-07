@@ -23,8 +23,23 @@ class Cinema extends Model
 
     protected $dates = ['deleted_at'];
 
+    /**
+     * Sinemanın ait olduğu şehir
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
     public function city()
     {
         return $this->belongsTo(City::class, 'city_id', 'id');
+    }
+
+    /**
+     * Sinemaya ait salonlar
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function halls()
+    {
+        return $this->hasMany(CinemaHall::class);
     }
 }

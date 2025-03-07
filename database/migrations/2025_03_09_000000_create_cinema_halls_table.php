@@ -1,0 +1,40 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+class CreateCinemaHallsTable extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('cinema_halls', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('cinema_id');
+            $table->string('name');
+            $table->integer('capacity')->default(0);
+            $table->string('type')->nullable()->comment('Örneğin: 2D, 3D, IMAX');
+            $table->timestamps();
+            
+            $table->foreign('cinema_id')
+                  ->references('id')
+                  ->on('cinemas')
+                  ->onDelete('cascade');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::dropIfExists('cinema_halls');
+    }
+}

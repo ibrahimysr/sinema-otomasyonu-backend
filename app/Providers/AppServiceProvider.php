@@ -6,9 +6,7 @@ use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
+   
     public function register(): void
     {
         $this->app->bind(\App\Repositories\CinemaRepository::class, function ($app) {
@@ -18,6 +16,16 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(\App\Services\CinemaService::class, function ($app) {
             return new \App\Services\CinemaService(
                 $app->make(\App\Repositories\CinemaRepository::class)
+            );
+        });
+        
+        $this->app->bind(\App\Repositories\CinemaHallRepository::class, function ($app) {
+            return new \App\Repositories\CinemaHallRepository($app->make(\App\Models\CinemaHall::class));
+        });
+        
+        $this->app->bind(\App\Services\CinemaHallService::class, function ($app) {
+            return new \App\Services\CinemaHallService(
+                $app->make(\App\Repositories\CinemaHallRepository::class)
             );
         });
         
@@ -34,9 +42,7 @@ class AppServiceProvider extends ServiceProvider
         });
     }
 
-    /**
-     * Bootstrap any application services.
-     */
+    
     public function boot(): void
     {
         //
