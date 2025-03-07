@@ -3,137 +3,126 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\ChangePasswordRequest;
+use App\Http\Requests\LoginRequest;
+use App\Http\Requests\RegisterRequest;
+use App\Services\AuthService;
+use App\Services\ResponseService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use App\Models\User;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    public function register(Request $request)
+    protected $authService;
+    protected $responseService;
+
+    /**
+     * AuthController constructor.
+     *
+     * @param AuthService $authService
+     * @param ResponseService $responseService
+     */
+    public function __construct(AuthService $authService, ResponseService $responseService)
     {
-        $validator = \Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed',
-        ]);
-    
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Kayıt başarısız.',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-    
-        $role_id = 1; 
-    
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role_id' => $role_id,
-        ]);
-    
-        $token = $user->generateApiToken();
-    
-        return response()->json([
-            'message' => 'Kayıt başarılı!',
-            'data' => [
+        $this->authService = $authService;
+        $this->responseService = $responseService;
+    }
+
+    /**
+     * Kullanıcı kaydı oluştur
+     *
+     * @param RegisterRequest $request
+     * @return JsonResponse
+     */
+    public function register(RegisterRequest $request): JsonResponse
+    {
+        $user = $this->authService->register($request->validated());
+        
+        return $this->responseService->success(
+            [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
                 'role_id' => $user->role_id,
+                'token' => $user->api_token,
             ],
-            'token' => $token,
-        ], 201);
+            'Kayıt başarılı!',
+            201
+        );
     }
 
-    public function login(Request $request)
+    /**
+     * Kullanıcı girişi yap
+     *
+     * @param LoginRequest $request
+     * @return JsonResponse
+     */
+    public function login(LoginRequest $request): JsonResponse
     {
-        $validator = \Validator::make($request->all(), [
-            'email' => 'required|email',
-            'password' => 'required|string',
-        ]);
-    
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Giriş başarısız.',
-                'errors' => $validator->errors(),
-            ], 422);
+        $user = $this->authService->login($request->email, $request->password);
+        
+        if (!$user) {
+            return $this->responseService->error(
+                'Giriş başarısız.',
+                ['email' => ['E-posta veya şifre yanlış.']],
+                401
+            );
         }
-    
-        $user = User::with('role')->where('email', $request->email)->first();
-    
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            return response()->json([
-                'message' => 'Giriş başarısız.',
-                'errors' => ['email' => ['E-posta veya şifre yanlış.']],
-            ], 401);
-        }
-    
-        $token = $user->generateApiToken();
-    
-        return response()->json([
-            'message' => 'Giriş başarılı!',
-            'data' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'role_id' => $user->role_id,
-                'role_name' => $user->role->name
-            ],
-            'token' => $token,
-        ]);
-    }
-
-    public function changePassword(Request $request)
-    {
-        $validator = \Validator::make($request->all(), [
-            'current_password' => 'required|string',
-            'new_password' => 'required|string|min:8|confirmed',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Şifre değiştirme başarısız.',
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
-        $user = $request->user();
-
-        if (!Hash::check($request->current_password, $user->password)) {
-            return response()->json([
-                'message' => 'Şifre değiştirme başarısız.',
-                'errors' => ['current_password' => ['Mevcut şifre yanlış.']],
-            ], 401);
-        }
-
-        $user->password = Hash::make($request->new_password);
-        $user->save();
-
-        $user->api_token = null;
-        $user->save();
-
-        return response()->json([
-            'message' => 'Şifre başarıyla değiştirildi. Lütfen tekrar giriş yapın.',
-        ], 200);
-    }
-
-    public function userProfile(Request $request)
-    {
-        $user = $request->user();
-
-        return response()->json([
-            'message' => 'Kullanıcı bilgileri getirildi.',
-            'data' => [
+        
+        return $this->responseService->success(
+            [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
                 'role_id' => $user->role_id,
                 'role_name' => $user->role->name,
-                'created_at' => $user->created_at->format('Y-m-d H:i:s'),
+                'token' => $user->api_token,
             ],
-        ], 200);
+            'Giriş başarılı!'
+        );
+    }
+
+    /**
+     * Kullanıcı şifresini değiştir
+     *
+     * @param ChangePasswordRequest $request
+     * @return JsonResponse
+     */
+    public function changePassword(ChangePasswordRequest $request): JsonResponse
+    {
+        $result = $this->authService->changePassword(
+            $request->user(),
+            $request->current_password,
+            $request->new_password
+        );
+        
+        if (!$result) {
+            return $this->responseService->error(
+                'Şifre değiştirme başarısız.',
+                ['current_password' => ['Mevcut şifre yanlış.']],
+                401
+            );
+        }
+        
+        return $this->responseService->success(
+            null,
+            'Şifre başarıyla değiştirildi. Lütfen tekrar giriş yapın.'
+        );
+    }
+
+    /**
+     * Kullanıcı profilini getir
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function userProfile(Request $request): JsonResponse
+    {
+        $profileData = $this->authService->getUserProfile($request->user());
+        
+        return $this->responseService->success(
+            $profileData,
+            'Kullanıcı bilgileri getirildi.'
+        );
     }
 }

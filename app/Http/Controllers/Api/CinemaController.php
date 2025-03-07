@@ -3,57 +3,120 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Cinema;
-use Illuminate\Http\Request;
+use App\Http\Requests\StoreCinemaRequest;
+use App\Http\Requests\UpdateCinemaRequest;
+use App\Services\CinemaService;
+use App\Services\ResponseService;
+use Illuminate\Http\JsonResponse;
 
 class CinemaController extends Controller
 {
-    public function index()
-    {
-        $cinemas = Cinema::with('city')->get();
+    protected $cinemaService;
+    protected $responseService;
 
-        return response()->json([
-            'success' => true,
-            'data' => $cinemas,
-            'message' => 'Sinemalar başarıyla listelendi.',
-        ], 200);
+    public function __construct(CinemaService $cinemaService, ResponseService $responseService)
+    {
+        $this->cinemaService = $cinemaService;
+        $this->responseService = $responseService;
     }
 
-    public function show($id)
+    /**
+     * Tüm sinemaları listele
+     *
+     * @return JsonResponse
+     */
+    public function index(): JsonResponse
     {
-        try {
-            $cinema = Cinema::with('city')->findOrFail($id);
+        $cinemas = $this->cinemaService->getAllCinemas();
+        return $this->responseService->success($cinemas, 'Sinemalar başarıyla listelendi.');
+    }
 
-            return response()->json([
-                'success' => true,
-                'data' => $cinema,
-                'message' => 'Sinema başarıyla bulundu.',
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'data' => null,
-                'message' => 'Sinema bulunamadı.',
-            ], 404); 
+    /**
+     * Belirli bir sinemayı göster
+     *
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function show(int $id): JsonResponse
+    {
+        $cinema = $this->cinemaService->getCinemaById($id);
+        
+        if (!$cinema) {
+            return $this->responseService->notFound('Sinema bulunamadı.');
         }
+        
+        return $this->responseService->success($cinema, 'Sinema başarıyla bulundu.');
     }
 
-    public function byCity($city_id)
+    /**
+     * Şehre göre sinemaları listele
+     *
+     * @param int $city_id
+     * @return JsonResponse
+     */
+    public function byCity(int $city_id): JsonResponse
     {
-        $cinemas = Cinema::where('city_id', $city_id)->with('city')->get();
-
+        $cinemas = $this->cinemaService->getCinemasByCity($city_id);
+        
         if ($cinemas->isEmpty()) {
-            return response()->json([
-                'success' => false,
-                'data' => [],
-                'message' => 'Bu şehirde sinema bulunamadı.',
-            ], 404);
+            return $this->responseService->notFound('Bu şehirde sinema bulunamadı.');
         }
+        
+        return $this->responseService->success($cinemas, 'Şehre ait sinemalar başarıyla listelendi.');
+    }
 
-        return response()->json([
-            'success' => true,
-            'data' => $cinemas,
-            'message' => 'Şehre ait sinemalar başarıyla listelendi.',
-        ], 200);
+    /**
+     * Yeni bir sinema oluştur
+     *
+     * @param StoreCinemaRequest $request
+     * @return JsonResponse
+     */
+    public function store(StoreCinemaRequest $request): JsonResponse
+    {
+        $cinema = $this->cinemaService->createCinema($request->validated());
+        return $this->responseService->success($cinema, 'Sinema başarıyla eklendi.', 201);
+    }
+
+    /**
+     * Mevcut bir sinemayı güncelle
+     *
+     * @param UpdateCinemaRequest $request
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function update(UpdateCinemaRequest $request, int $id): JsonResponse
+    {
+        $cinema = $this->cinemaService->updateCinema($id, $request->validated());
+        
+        if (!$cinema) {
+            return $this->responseService->notFound('Sinema bulunamadı.');
+        }
+        
+        return $this->responseService->success($cinema, 'Sinema başarıyla güncellendi.');
+    }
+
+    /**
+     * Bir sinemayı sil
+     *
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function destroy(int $id): JsonResponse
+    {
+        $result = $this->cinemaService->deleteCinema($id);
+        
+        if (is_array($result) && isset($result['success']) && $result['success'] === false) {
+            return $this->responseService->error(
+                'Sinema silinemedi. İlişkili kayıtlar bulunmaktadır.',
+                $result['related_records'],
+                409
+            );
+        }
+        
+        if (!$result) {
+            return $this->responseService->notFound('Sinema bulunamadı.');
+        }
+        
+        return $this->responseService->success(null, 'Sinema başarıyla silindi.');
     }
 }
