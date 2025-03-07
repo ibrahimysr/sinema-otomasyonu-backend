@@ -9,5 +9,6 @@ require __DIR__ . '/cinema/cinema.php';
 require __DIR__ . '/cinema/cinema_hall.php';
 require __DIR__ . '/cinema/seat.php';
 require __DIR__ . '/movie/movie.php';
+require __DIR__ . '/cinema/showtime.php';
 
 
