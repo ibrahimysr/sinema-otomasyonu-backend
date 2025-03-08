@@ -14,5 +14,7 @@ class DatabaseSeeder extends Seeder
         $this->call(SeatSeeder::class);
         $this->call(MovieSeeder::class);
         $this->call(ShowtimeSeeder::class);
+        $this->call(TicketSeeder::class);
+        $this->call(PaymentSeeder::class);
     }
 }

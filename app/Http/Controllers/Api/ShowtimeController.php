@@ -97,7 +97,73 @@ class ShowtimeController extends Controller
      */
     public function store(StoreShowtimeRequest $request): JsonResponse
     {
-        $showtime = $this->showtimeService->createShowtime($request->validated());
+        $data = $request->validated();
+        
+        // Salon bilgisini al
+        $hall = \App\Models\CinemaHall::with('seats')->find($data['cinema_hall_id']);
+        
+        if (!$hall) {
+            return $this->responseService->error('Salon bulunamadı.', 404);
+        }
+        
+        if (!$hall->seats) {
+            return $this->responseService->error('Bu salon için koltuk bilgisi bulunamadı.', 404);
+        }
+        
+        // Koltuk durumunu oluştur (eğer belirtilmemişse)
+        if (!isset($data['seat_status'])) {
+            $seatStatus = [];
+            $seatData = $hall->seats->seat_data;
+            
+            // Eğer seat_data null ise, varsayılan bir koltuk düzeni oluştur
+            if (!$seatData) {
+                // Salonun kapasitesine göre basit bir koltuk düzeni oluştur
+                $capacity = $hall->capacity ?: 50; // Varsayılan kapasite 50
+                $rows = ceil(sqrt($capacity)); // Kare şeklinde bir düzen için
+                
+                $seatData = ['seats' => []];
+                $seatCount = 0;
+                
+                for ($i = 0; $i < $rows && $seatCount < $capacity; $i++) {
+                    $rowName = chr(65 + $i); // A, B, C, ...
+                    $seatData['seats'][$rowName] = [];
+                    
+                    for ($j = 1; $j <= $rows && $seatCount < $capacity; $j++) {
+                        $seatData['seats'][$rowName][] = [
+                            'id' => $rowName . $j,
+                            'row' => $rowName,
+                            'number' => $j,
+                            'status' => 'available',
+                            'type' => 'normal',
+                            'price' => 0,
+                        ];
+                        $seatCount++;
+                    }
+                }
+            }
+            
+            // Koltuk durumunu oluştur
+            if (isset($seatData['seats'])) {
+                foreach ($seatData['seats'] as $row => $seats) {
+                    foreach ($seats as $seat) {
+                        // Başlangıçta tüm koltuklar müsait
+                        $seatStatus[$seat['id']] = 'available';
+                    }
+                }
+            }
+            
+            // Koltuk durumunu ekle
+            $data['seat_status'] = json_encode($seatStatus);
+            
+            // Müsait koltuk sayısını hesapla (eğer belirtilmemişse)
+            if (!isset($data['available_seats'])) {
+                $data['available_seats'] = count($seatStatus);
+            }
+        }
+        
+        // Seansı oluştur
+        $showtime = $this->showtimeService->createShowtime($data);
+        
         return $this->responseService->success($showtime, 'Seans başarıyla eklendi.', 201);
     }
 

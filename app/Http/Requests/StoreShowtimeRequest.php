@@ -29,7 +29,7 @@ class StoreShowtimeRequest extends FormRequest
             'start_time' => 'required|date',
             'end_time' => 'required|date|after:start_time',
             'price' => 'required|numeric|min:0',
-            'available_seats' => 'required|integer|min:0',
+            'available_seats' => 'nullable|integer|min:0',
             'seat_status' => 'nullable|json',
         ];
     }
@@ -54,7 +54,6 @@ class StoreShowtimeRequest extends FormRequest
             'price.required' => 'Fiyat zorunludur.',
             'price.numeric' => 'Fiyat bir sayı olmalıdır.',
             'price.min' => 'Fiyat en az 0 olmalıdır.',
-            'available_seats.required' => 'Müsait koltuk sayısı zorunludur.',
             'available_seats.integer' => 'Müsait koltuk sayısı bir tam sayı olmalıdır.',
             'available_seats.min' => 'Müsait koltuk sayısı en az 0 olmalıdır.',
             'seat_status.json' => 'Koltuk durumu geçerli bir JSON formatında olmalıdır.',

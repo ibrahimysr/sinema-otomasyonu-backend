@@ -11,15 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('showtimes', function (Blueprint $table) {
+        Schema::create('tickets', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('movie_id');
-            $table->unsignedBigInteger('cinema_hall_id');
-            $table->dateTime('start_time');
-            $table->dateTime('end_time');
+            $table->unsignedBigInteger('user_id');
+            $table->unsignedBigInteger('showtime_id');
+            $table->string('seat_number');
             $table->decimal('price', 10, 2);
-            $table->integer('available_seats');
-            $table->json('seat_status')->nullable()->comment('Seans bazında koltuk durumu');
+            $table->string('status')->default('reserved'); // reserved, confirmed, cancelled
+            $table->string('ticket_code')->unique();
             $table->timestamps();
         });
     }
@@ -29,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('showtimes');
+        Schema::dropIfExists('tickets');
     }
 };

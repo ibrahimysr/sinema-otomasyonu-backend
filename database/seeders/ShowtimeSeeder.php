@@ -10,6 +10,7 @@ use App\Services\SeatService;
 use Carbon\Carbon;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class ShowtimeSeeder extends Seeder
 {
@@ -26,15 +27,23 @@ class ShowtimeSeeder extends Seeder
             return;
         }
 
-        Showtime::truncate();
+        // Foreign key kontrollerini geçici olarak devre dışı bırak
+        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        
+        // Mevcut seansları temizle
+        Showtime::query()->delete();
+        
+        // Foreign key kontrollerini tekrar etkinleştir
+        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
         foreach ($halls as $hall) {
             // Salonun koltuk verilerini al
             $seatData = $hall->seats ? $hall->seats->seat_data : null;
             
+            // Eğer seat_data null ise, varsayılan bir koltuk düzeni oluştur
             if (!$seatData) {
-                $this->command->info("Salon {$hall->id} için koltuk verisi bulunamadı, atlanıyor.");
-                continue;
+                $this->command->info("Salon {$hall->id} ({$hall->name}) için koltuklar oluşturuluyor...");
+                $seatData = $this->generateSeatData($hall);
             }
             
             // Bugün için bir seans
@@ -100,5 +109,40 @@ class ShowtimeSeeder extends Seeder
             'available_seats' => $availableSeats,
             'seat_status' => json_encode($seatStatus),
         ]);
+    }
+    
+    /**
+     * Salon kapasitesine göre varsayılan bir koltuk düzeni oluştur
+     * 
+     * @param CinemaHall $hall
+     * @return array
+     */
+    private function generateSeatData(CinemaHall $hall): array
+    {
+        // Salonun kapasitesine göre basit bir koltuk düzeni oluştur
+        $capacity = $hall->capacity ?: 50; // Varsayılan kapasite 50
+        $rows = ceil(sqrt($capacity)); // Kare şeklinde bir düzen için
+        
+        $seatData = ['seats' => []];
+        $seatCount = 0;
+        
+        for ($i = 0; $i < $rows && $seatCount < $capacity; $i++) {
+            $rowName = chr(65 + $i); // A, B, C, ...
+            $seatData['seats'][$rowName] = [];
+            
+            for ($j = 1; $j <= $rows && $seatCount < $capacity; $j++) {
+                $seatData['seats'][$rowName][] = [
+                    'id' => $rowName . $j,
+                    'row' => $rowName,
+                    'number' => $j,
+                    'status' => 'available',
+                    'type' => 'normal',
+                    'price' => 0,
+                ];
+                $seatCount++;
+            }
+        }
+        
+        return $seatData;
     }
 }

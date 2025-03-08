@@ -20,11 +20,6 @@ class CreateCinemaHallsTable extends Migration
             $table->integer('capacity')->default(0);
             $table->string('type')->nullable()->comment('Örneğin: 2D, 3D, IMAX');
             $table->timestamps();
-            
-            $table->foreign('cinema_id')
-                  ->references('id')
-                  ->on('cinemas')
-                  ->onDelete('cascade');
         });
     }
 

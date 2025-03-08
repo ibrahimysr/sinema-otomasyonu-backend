@@ -19,11 +19,6 @@ class CreateSeatsTable extends Migration
             $table->json('seat_data')->comment('Koltuk düzeni (statik)');
             $table->string('status')->default('active')->comment('Genel durum: active, inactive, maintenance');
             $table->timestamps();
-            
-            $table->foreign('cinema_hall_id')
-                  ->references('id')
-                  ->on('cinema_halls')
-                  ->onDelete('cascade');
         });
     }
 
