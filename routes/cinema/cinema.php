@@ -2,7 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\CinemaController;
-
+Route::get('/cinemas/datatable', [CinemaController::class, 'getCinemas'])->middleware('auth');
 Route::prefix('cinemas')->group(function () {
     Route::middleware('auth')->group(function () {
         Route::get('/cinema-list', [CinemaController::class, 'index'])->name('cinema-list'); 

@@ -7,6 +7,7 @@ use App\Models\Ticket;
 use App\Repositories\TicketRepository;
 use App\Repositories\ShowtimeRepository;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 
 class TicketService
@@ -203,5 +204,15 @@ class TicketService
             'seat_status' => json_encode($seatStatus),
             'available_seats' => $availableSeats,
         ]);
+    }
+
+    /**
+     * DataTables için bilet sorgusu oluştur
+     *
+     * @return Builder
+     */
+    public function getTicketsQuery(): Builder
+    {
+        return Ticket::with(['user', 'showtime.movie', 'showtime.cinemaHall.cinema']);
     }
 } 

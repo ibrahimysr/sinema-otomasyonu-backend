@@ -9,6 +9,7 @@ Route::prefix('showtimes')->group(function () {
         Route::get('/showtime-detail/{id}', [ShowtimeController::class, 'show'])->name('showtime-detail');
         Route::get('/showtime-by-movie/{movie_id}', [ShowtimeController::class, 'byMovie'])->name('showtime-by-movie');
         Route::get('/showtime-by-hall/{cinema_hall_id}', [ShowtimeController::class, 'byCinemaHall'])->name('showtime-by-hall');
+        Route::get('/datatable', [ShowtimeController::class, 'getShowtimes'])->name('showtime-datatable');
     });
 
     Route::middleware(['auth', 'check.role:admin,super_admin'])->group(function () {

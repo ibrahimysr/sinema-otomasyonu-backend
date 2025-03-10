@@ -132,12 +132,12 @@
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table class="table table-hover" id="paymentsTable">
                     <thead>
                         <tr>
                             <th><i class="fas fa-hashtag me-2"></i>ID</th>
-                            <th><i class="fas fa-user me-2"></i>Müşteri</th>
                             <th><i class="fas fa-ticket-alt me-2"></i>Bilet</th>
+                            <th><i class="fas fa-user me-2"></i>Müşteri</th>
                             <th><i class="fas fa-money-bill me-2"></i>Tutar</th>
                             <th><i class="fas fa-credit-card me-2"></i>Ödeme Yöntemi</th>
                             <th><i class="fas fa-calendar me-2"></i>Tarih</th>
@@ -145,15 +145,8 @@
                             <th><i class="fas fa-cog me-2"></i>İşlemler</th>
                         </tr>
                     </thead>
-                    <tbody id="paymentsTableBody">
-                        <tr>
-                            <td colspan="9" class="text-center py-4">
-                                <div class="d-flex justify-content-center align-items-center">
-                                    <div class="loading-spinner me-2"></div>
-                                    <span>Yükleniyor...</span>
-                                </div>
-                            </td>
-                        </tr>
+                    <tbody>
+                        <!-- DataTables tarafından doldurulacak -->
                     </tbody>
                 </table>
             </div>
@@ -226,7 +219,7 @@
                                 <select class="form-select" id="status" name="status" required>
                                     <option value="pending">Bekliyor</option>
                                     <option value="completed">Tamamlandı</option>
-                                    <option value="cancelled">İptal Edildi</option>
+                                    <option value="failed">İptal Edildi</option>
                                 </select>
                             </div>
                         </div>
@@ -325,7 +318,7 @@
                                 <select class="form-select" id="edit_status" name="status" required>
                                     <option value="pending">Bekliyor</option>
                                     <option value="completed">Tamamlandı</option>
-                                    <option value="cancelled">İptal Edildi</option>
+                                    <option value="failed">İptal Edildi</option>
                                 </select>
                             </div>
                         </div>

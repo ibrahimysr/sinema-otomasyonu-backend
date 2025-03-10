@@ -1,4 +1,3 @@
-
 $(document).ready(function() {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -9,27 +8,85 @@ $(document).ready(function() {
     loadMovies();
     loadCinemas();
     
-    fetchShowtimes();
-    
+    const table = $('#showtimesTable').DataTable({
+        processing: true,
+        serverSide: true,
+        responsive: true,
+        searching: false, 
+        ajax: {
+            url: '/api/showtimes/datatable',
+            type: 'GET',
+            headers: {
+                'Authorization': 'Bearer ' + token
+            },
+            data: function(d) {
+                d.movie_id = $('#searchMovie').val();
+                d.cinema_id = $('#searchCinema').val();
+                d.date = $('#searchDate').val();
+            },
+            error: function(xhr) {
+                if (xhr.status === 401) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login';
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Hata!',
+                        text: 'Veriler yüklenirken bir hata oluştu: ' + xhr.statusText
+                    });
+                }
+            }
+        },
+        columns: [
+            { data: 'id', name: 'id' },
+            { data: 'movie_title', name: 'movie.title', orderable: false },
+            { data: 'cinema_hall', name: 'cinemaHall.name', orderable: false },
+            { data: 'date', name: 'start_time', orderable: true },
+            { data: 'time', name: 'start_time', orderable: true },
+            { data: 'status', name: 'status', orderable: false },
+            { data: 'actions', name: 'actions', orderable: false, searchable: false }
+        ],
+        language: {
+            url: '/js/i18n/tr.json' 
+        },
+        drawCallback: function() {
+            $('#showtimesTable tbody tr').addClass('animate__animated animate__fadeIn');
+        }
+    });
     
     setupModalManagement();
     
     $('#searchForm').on('submit', function(e) {
         e.preventDefault();
-        fetchShowtimes();
+        table.draw();
+    });
+    
+    $('#searchMovie, #searchCinema').on('change', function() {
+        table.draw();
+    });
+
+    $('#searchDate').on('change', function() {
+        table.draw();
     });
     
     $('#resetSearch').on('click', function() {
         $('#searchMovie').val('');
         $('#searchCinema').val('');
         $('#searchDate').val('');
-        fetchShowtimes();
+        table.draw();
     });
+    
+    function fetchShowtimes() {
+        $('#showtimesTable').DataTable().ajax.reload();
+    }
     
     $('#cinema_id, #edit_cinema_id').on('change', function() {
         const cinemaId = $(this).val();
+        console.log('Sinema seçildi, ID:', cinemaId);
+        
         if (cinemaId) {
-            loadHalls(cinemaId, $(this).attr('id').startsWith('edit_') ? 'edit_' : '');
+            const prefix = $(this).attr('id').startsWith('edit_') ? 'edit_' : '';
+            loadHalls(cinemaId, prefix);
         } else {
             const prefix = $(this).attr('id').startsWith('edit_') ? 'edit_' : '';
             $(`#${prefix}hall_id`).html('<option value="">Önce Sinema Seçin</option>');
@@ -46,6 +103,17 @@ $(document).ready(function() {
     
     $('#confirmDeleteBtn').on('click', function() {
         deleteShowtime();
+    });
+
+    $(document).on('click', '.edit-showtime', function() {
+        const showtimeId = $(this).data('id');
+        editShowtime(showtimeId);
+    });
+
+    $(document).on('click', '.delete-showtime', function() {
+        const showtimeId = $(this).data('id');
+        const showtimeName = $(this).data('name');
+        confirmDelete(showtimeId, showtimeName);
     });
 });
 
@@ -89,13 +157,13 @@ function loadMovies() {
     const token = localStorage.getItem('token');
     
     $.ajax({
-        url: '/api/movies/movie-list',
+        url: '/api/movies/all-movies',
         type: 'GET',
         headers: {
             'Authorization': 'Bearer ' + token
         },
         success: function(response) {
-            if (response && response.data) {
+            if (response && response.success && response.data) {
                 const movies = Array.isArray(response.data) ? response.data : Object.values(response.data);
                 let options = '<option value="">Tümü</option>';
                 
@@ -108,9 +176,12 @@ function loadMovies() {
                 }
                 
                 $('#searchMovie, #movie_id, #edit_movie_id').html(options);
+            } else {
+                console.error('Film verileri alınamadı:', response);
             }
         },
         error: function(xhr) {
+            console.error('Film yükleme hatası:', xhr);
             if (xhr.status === 401) {
                 localStorage.removeItem('token');
                 window.location.href = '/login';
@@ -139,7 +210,7 @@ function loadCinemas() {
             'Authorization': 'Bearer ' + token
         },
         success: function(response) {
-            if (response && response.data) {
+            if (response && response.success && response.data) {
                 const cinemas = Array.isArray(response.data) ? response.data : Object.values(response.data);
                 let options = '<option value="">Tümü</option>';
                 
@@ -153,9 +224,12 @@ function loadCinemas() {
                 }
                 
                 $('#searchCinema, #cinema_id, #edit_cinema_id').html(options);
+            } else {
+                console.error('Sinema verileri alınamadı:', response);
             }
         },
         error: function(xhr) {
+            console.error('Sinema yükleme hatası:', xhr);
             if (xhr.status === 401) {
                 localStorage.removeItem('token');
                 window.location.href = '/login';
@@ -174,39 +248,59 @@ function loadCinemas() {
 function loadHalls(cinemaId, prefix = '') {
     const token = localStorage.getItem('token');
     
+    if (!cinemaId) {
+        console.error('Sinema ID boş, salonlar yüklenemedi');
+        $(`#${prefix}hall_id`).html('<option value="">Önce Sinema Seçin</option>');
+        return;
+    }
+    
+    console.log(`Salonlar yükleniyor... Sinema ID: ${cinemaId}, Prefix: ${prefix}`);
+    
     $.ajax({
-        url: `/api/cinema-halls/by-cinema/${cinemaId}`,
+        url: `/api/cinema-halls/hall-by-cinema/${cinemaId}`,
         type: 'GET',
         headers: {
             'Authorization': 'Bearer ' + token
         },
         success: function(response) {
-            if (response && response.data) {
+            console.log('Salon API yanıtı:', response);
+            
+            if (response && response.success && response.data) {
                 const halls = Array.isArray(response.data) ? response.data : Object.values(response.data);
                 let options = '<option value="">Salon Seçin</option>';
                 
                 if (halls && halls.length > 0) {
+                    console.log(`${halls.length} salon bulundu`);
                     halls.forEach(hall => {
                         if (hall && hall.id && hall.name) {
                             options += `<option value="${hall.id}">${hall.name} (${hall.capacity || 0} Kişi)</option>`;
                         }
                     });
+                } else {
+                    console.log('Bu sinemada salon bulunamadı');
                 }
                 
                 $(`#${prefix}hall_id`).html(options);
+            } else {
+                console.error('Salon verileri alınamadı:', response);
+                $(`#${prefix}hall_id`).html('<option value="">Salon bulunamadı</option>');
             }
         },
         error: function(xhr) {
+            console.error('Salon yükleme hatası:', xhr);
+            
             if (xhr.status === 401) {
                 localStorage.removeItem('token');
                 window.location.href = '/login';
                 return;
             }
             
+            $(`#${prefix}hall_id`).html('<option value="">Salon yüklenemedi</option>');
+            
             Swal.fire({
                 icon: 'error',
                 title: 'Hata!',
-                text: 'Salonlar yüklenirken bir hata oluştu'
+                text: 'Salonlar yüklenirken bir hata oluştu: ' + (xhr.responseJSON?.message || xhr.statusText)
             });
         }
     });
@@ -234,146 +328,6 @@ async function getCinemaById(cinemaId) {
     }
 }
 
-function fetchShowtimes() {
-    const token = localStorage.getItem('token');
-    const movie = $('#searchMovie').val();
-    const cinema = $('#searchCinema').val();
-    const date = $('#searchDate').val();
-    
-    $.ajax({
-        url: '/api/showtimes/showtime-list',
-        type: 'GET',
-        data: {
-            movie_id: movie,
-            cinema_id: cinema,
-            date: date
-        },
-        headers: {
-            'Authorization': 'Bearer ' + token
-        },
-        beforeSend: function() {
-            $('#showtimesList').html(`
-                <tr>
-                    <td colspan="7" class="text-center">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Yükleniyor...</span>
-                        </div>
-                    </td>
-                </tr>
-            `);
-        },
-        success: function(response) {
-            console.log('API Yanıtı:', response);
-            
-            if (!response || !response.success) {
-                $('#showtimesList').html('<tr><td colspan="7" class="text-center">Veri alınamadı</td></tr>');
-                return;
-            }
-
-            let showtimes = Array.isArray(response.data) ? response.data : [];
-            
-            if (showtimes.length === 0) {
-                $('#showtimesList').html('<tr><td colspan="7" class="text-center">Hiç seans bulunamadı</td></tr>');
-                return;
-            }
-            
-            let html = '';
-            showtimes.forEach(showtime => {
-                if (!showtime || !showtime.movie || !showtime.cinema_hall) return;
-                
-                const startTime = new Date(showtime.start_time);
-                const date = startTime.toLocaleDateString('tr-TR');
-                const time = startTime.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-                
-                const movie = showtime.movie;
-                const cinemaHall = showtime.cinema_hall;
-                
-                const cinema = cinemaCache[cinemaHall.cinema_id];
-                
-                html += `
-                    <tr class="animate__animated animate__fadeIn">
-                        <td>${showtime.id || ''}</td>
-                        <td>
-                            <div class="d-flex align-items-center">
-                                ${movie.poster_url ? 
-                                    `<img src="${movie.poster_url}" class="me-2 rounded hover-zoom" width="40" height="40" alt="${movie.title || 'Film'}">` : 
-                                    `<div class="bg-light rounded me-2 d-flex align-items-center justify-content-center" style="width:40px;height:40px;">
-                                        <i class="fas fa-film text-secondary"></i>
-                                    </div>`
-                                }
-                                <div>
-                                    <span class="d-block">${movie.title || 'İsimsiz Film'}</span>
-                                    <small class="text-muted">${movie.duration || 0} dk</small>
-                                </div>
-                            </div>
-                        </td>
-                        <td>
-                            <div>
-                                <span class="d-block">${cinema ? cinema.name : 'Bilinmeyen Sinema'}</span>
-                                <small class="text-muted">${cinemaHall.name || 'Bilinmeyen Salon'} ${cinemaHall.type ? `(${cinemaHall.type})` : ''}</small>
-                            </div>
-                        </td>
-                        <td>
-                            <span class="badge bg-info">
-                                <i class="fas fa-calendar me-1"></i>${date}
-                            </span>
-                        </td>
-                        <td>
-                            <span class="badge bg-primary">
-                                <i class="fas fa-clock me-1"></i>${time}
-                            </span>
-                        </td>
-                        <td>
-                            <span class="badge ${showtime.available_seats > 0 ? 'bg-success' : 'bg-danger'}">
-                                ${showtime.available_seats} Koltuk
-                            </span>
-                        </td>
-                        <td>
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-sm btn-primary" onclick="editShowtime(${showtime.id})">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete(${showtime.id}, '${movie.title || 'İsimsiz Film'} - ${date} ${time}')">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            });
-            
-            if (html === '') {
-                $('#showtimesList').html('<tr><td colspan="7" class="text-center">Hiç seans bulunamadı</td></tr>');
-            } else {
-                $('#showtimesList').html(html);
-            }
-        },
-        error: function(xhr) {
-            console.error('API Hatası:', xhr);
-            
-            if (xhr.status === 401) {
-                localStorage.removeItem('token');
-                window.location.href = '/login';
-                return;
-            }
-            
-            let errorMessage = 'Seanslar yüklenirken bir hata oluştu';
-            if (xhr.responseJSON && xhr.responseJSON.message) {
-                errorMessage = xhr.responseJSON.message;
-            }
-            
-            $('#showtimesList').html(`<tr><td colspan="7" class="text-center text-danger">
-                <i class="fas fa-exclamation-circle me-2"></i>${errorMessage}</td></tr>`);
-            
-            Swal.fire({
-                icon: 'error',
-                title: 'Hata!',
-                text: errorMessage
-            });
-        }
-    });
-}
-
 function confirmDelete(id, name) {
     $('#deleteShowtimeId').val(id);
     $('#deleteShowtimeName').text(name);
@@ -390,20 +344,42 @@ function editShowtime(id) {
             'Authorization': 'Bearer ' + token
         },
         success: function(response) {
+            console.log('Seans detayı:', response);
+            
             if (response.success && response.data) {
                 const showtime = response.data;
                 
+                const startDateTime = new Date(showtime.start_time);
+                const endDateTime = new Date(showtime.end_time);
+                
+                const date = startDateTime.toISOString().split('T')[0];
+                
+                const startTime = startDateTime.toTimeString().slice(0, 5);
+                const endTime = endDateTime.toTimeString().slice(0, 5);
+                
+                console.log('Ayrıştırılmış tarih ve saat:', {
+                    date: date,
+                    startTime: startTime,
+                    endTime: endTime
+                });
+                
                 $('#editShowtimeId').val(showtime.id);
                 $('#edit_movie_id').val(showtime.movie_id);
-                $('#edit_cinema_id').val(showtime.cinema_id);
-                loadHalls(showtime.cinema_id, 'edit_');
-                setTimeout(() => {
-                    $('#edit_hall_id').val(showtime.hall_id);
-                }, 500);
-                $('#edit_date').val(showtime.date);
-                $('#edit_time').val(showtime.time);
+                
+                if (showtime.cinema_hall && showtime.cinema_hall.cinema_id) {
+                    $('#edit_cinema_id').val(showtime.cinema_hall.cinema_id);
+                    loadHalls(showtime.cinema_hall.cinema_id, 'edit_');
+                    
+                    setTimeout(() => {
+                        $('#edit_hall_id').val(showtime.cinema_hall_id);
+                    }, 500);
+                }
+                
+                // Tarih ve saat bilgilerini ayarla
+                $('#edit_date').val(date);
+                $('#edit_start_time').val(startTime);
+                $('#edit_end_time').val(endTime);
                 $('#edit_price').val(showtime.price);
-                $('#edit_is_active').prop('checked', showtime.is_active);
                 
                 openModal('editShowtimeModal');
             } else {
@@ -432,14 +408,78 @@ function editShowtime(id) {
 
 function saveShowtime() {
     const token = localStorage.getItem('token');
+    
+    const movieId = $('#movie_id').val();
+    const cinemaId = $('#cinema_id').val();
+    const hallId = $('#hall_id').val();
+    const date = $('#date').val();
+    const startTime = $('#start_time').val();
+    const endTime = $('#end_time').val();
+    const price = $('#price').val();
+    const isActive = $('#is_active').is(':checked');
+    
+    if (!movieId) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Uyarı!',
+            text: 'Lütfen bir film seçin'
+        });
+        return;
+    }
+    
+    if (!cinemaId) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Uyarı!',
+            text: 'Lütfen bir sinema seçin'
+        });
+        return;
+    }
+    
+    if (!hallId) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Uyarı!',
+            text: 'Lütfen bir salon seçin'
+        });
+        return;
+    }
+    
+    if (!date || !startTime || !endTime) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Uyarı!',
+            text: 'Lütfen tarih, başlangıç ve bitiş saatlerini girin'
+        });
+        return;
+    }
+    
+    if (startTime >= endTime) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Uyarı!',
+            text: 'Bitiş saati başlangıç saatinden sonra olmalıdır'
+        });
+        return;
+    }
+    
+    const startDateTime = `${date} ${startTime}:00`;
+    const endDateTime = `${date} ${endTime}:00`;
+    
+    console.log('Seans ekleniyor...', {
+        movie_id: movieId,
+        cinema_hall_id: hallId,
+        start_time: startDateTime,
+        end_time: endDateTime,
+        price: price
+    });
+    
     const formData = {
-        movie_id: $('#movie_id').val(),
-        cinema_id: $('#cinema_id').val(),
-        hall_id: $('#hall_id').val(),
-        date: $('#date').val(),
-        time: $('#time').val(),
-        price: $('#price').val(),
-        is_active: $('#is_active').is(':checked')
+        movie_id: movieId,
+        cinema_hall_id: hallId,
+        start_time: startDateTime,
+        end_time: endDateTime,
+        price: price
     };
     
     $.ajax({
@@ -450,6 +490,8 @@ function saveShowtime() {
             'Authorization': 'Bearer ' + token
         },
         success: function(response) {
+            console.log('Seans ekleme yanıtı:', response);
+            
             if (response.success) {
                 closeModal('addShowtimeModal');
                 $('#addShowtimeForm')[0].reset();
@@ -470,6 +512,8 @@ function saveShowtime() {
             }
         },
         error: function(xhr) {
+            console.error('Seans ekleme hatası:', xhr);
+            
             if (xhr.status === 401) {
                 localStorage.removeItem('token');
                 window.location.href = '/login';
@@ -478,10 +522,11 @@ function saveShowtime() {
             
             const errors = xhr.responseJSON?.errors;
             if (errors) {
+                console.error('Doğrulama hataları:', errors);
                 Object.keys(errors).forEach(key => {
                     Swal.fire({
                         icon: 'error',
-                        title: 'Hata!',
+                        title: 'Doğrulama Hatası!',
                         text: errors[key][0]
                     });
                 });
@@ -489,7 +534,7 @@ function saveShowtime() {
                 Swal.fire({
                     icon: 'error',
                     title: 'Hata!',
-                    text: 'Seans eklenirken bir hata oluştu'
+                    text: xhr.responseJSON?.message || 'Seans eklenirken bir hata oluştu'
                 });
             }
         }
@@ -499,14 +544,50 @@ function saveShowtime() {
 function updateShowtime() {
     const token = localStorage.getItem('token');
     const id = $('#editShowtimeId').val();
+    
+    const movieId = $('#edit_movie_id').val();
+    const hallId = $('#edit_hall_id').val();
+    const date = $('#edit_date').val();
+    const startTime = $('#edit_start_time').val();
+    const endTime = $('#edit_end_time').val();
+    const price = $('#edit_price').val();
+    
+    if (!movieId || !hallId || !date || !startTime || !endTime || !price) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Uyarı!',
+            text: 'Lütfen tüm alanları doldurun'
+        });
+        return;
+    }
+    
+    if (startTime >= endTime) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Uyarı!',
+            text: 'Bitiş saati başlangıç saatinden sonra olmalıdır'
+        });
+        return;
+    }
+    
+    const startDateTime = `${date} ${startTime}:00`;
+    const endDateTime = `${date} ${endTime}:00`;
+    
+    console.log('Seans güncelleniyor...', {
+        id: id,
+        movie_id: movieId,
+        cinema_hall_id: hallId,
+        start_time: startDateTime,
+        end_time: endDateTime,
+        price: price
+    });
+    
     const formData = {
-        movie_id: $('#edit_movie_id').val(),
-        cinema_id: $('#edit_cinema_id').val(),
-        hall_id: $('#edit_hall_id').val(),
-        date: $('#edit_date').val(),
-        time: $('#edit_time').val(),
-        price: $('#edit_price').val(),
-        is_active: $('#edit_is_active').is(':checked')
+        movie_id: movieId,
+        cinema_hall_id: hallId,
+        start_time: startDateTime,
+        end_time: endDateTime,
+        price: price
     };
     
     $.ajax({
@@ -517,6 +598,8 @@ function updateShowtime() {
             'Authorization': 'Bearer ' + token
         },
         success: function(response) {
+            console.log('Seans güncelleme yanıtı:', response);
+            
             if (response.success) {
                 closeModal('editShowtimeModal');
                 Swal.fire({

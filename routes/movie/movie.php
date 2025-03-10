@@ -3,9 +3,13 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\MovieController;
 
+
+
+Route::get('/movies/datatable', [MovieController::class, 'getMovies'])->middleware('auth');
 Route::prefix('movies')->group(function () {
     Route::middleware('auth')->group(function () {
         Route::get('/movie-list', [MovieController::class, 'index'])->name('movie-list');
+        Route::get('/all-movies', [MovieController::class, 'getAllMovies'])->name('all-movies');
         Route::get('/movie-detail/{id}', [MovieController::class, 'show'])->name('movie-detail');
         Route::get('/movie-search', [MovieController::class, 'search'])->name('movie-search');
     });

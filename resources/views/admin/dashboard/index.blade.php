@@ -54,7 +54,7 @@
             </div>
         </div>
         <div class="col-md-3 mb-4 animate__animated animate__fadeInUp animate__delay-3s">
-            <div class="card stat-card bg-gradient-info text-white h-100">
+            <div class="card stat-card bg-gradient-danger text-white h-100">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
@@ -84,15 +84,13 @@
                             <i class="fas fa-ellipsis-v"></i>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="ticketSalesDropdown">
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-download me-2"></i>İndir</a></li>
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-sync me-2"></i>Yenile</a></li>
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-expand me-2"></i>Genişlet</a></li>
+                            <li><a class="dropdown-item" href="#" id="refreshTicketSales"><i class="fas fa-sync me-2"></i>Yenile</a></li>
                         </ul>
                     </div>
                 </div>
                 <div class="card-body">
                     <div class="chart-container" style="position: relative; height:300px;">
-                    <canvas id="ticketSalesChart"></canvas>
+                        <canvas id="ticketSalesChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -109,9 +107,7 @@
                             <i class="fas fa-ellipsis-v"></i>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="popularMoviesDropdown">
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-download me-2"></i>İndir</a></li>
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-sync me-2"></i>Yenile</a></li>
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-expand me-2"></i>Genişlet</a></li>
+                            <li><a class="dropdown-item" href="#" id="refreshPopularMovies"><i class="fas fa-sync me-2"></i>Yenile</a></li>
                         </ul>
                     </div>
                 </div>
@@ -137,15 +133,13 @@
                             <i class="fas fa-ellipsis-v"></i>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="recentTicketsDropdown">
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-download me-2"></i>İndir</a></li>
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-sync me-2"></i>Yenile</a></li>
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-expand me-2"></i>Genişlet</a></li>
+                            <li><a class="dropdown-item" href="#" id="refreshRecentTickets"><i class="fas fa-sync me-2"></i>Yenile</a></li>
                         </ul>
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="table-container">
-                        <table class="table table-hover">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="recentTicketsTable">
                             <thead>
                                 <tr>
                                     <th><i class="fas fa-hashtag me-1"></i>Kod</th>
@@ -155,15 +149,8 @@
                                     <th><i class="fas fa-money-bill me-1"></i>Tutar</th>
                                 </tr>
                             </thead>
-                            <tbody id="recentTicketsTable">
-                                <tr>
-                                    <td colspan="5" class="text-center py-4">
-                                        <div class="d-flex justify-content-center align-items-center">
-                                            <div class="loading-spinner me-2"></div>
-                                            <span>Yükleniyor...</span>
-                                        </div>
-                                    </td>
-                                </tr>
+                            <tbody>
+                                <!-- DataTables tarafından doldurulacak -->
                             </tbody>
                         </table>
                     </div>
@@ -182,15 +169,13 @@
                             <i class="fas fa-ellipsis-v"></i>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="todayShowtimesDropdown">
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-download me-2"></i>İndir</a></li>
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-sync me-2"></i>Yenile</a></li>
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-expand me-2"></i>Genişlet</a></li>
+                            <li><a class="dropdown-item" href="#" id="refreshTodayShowtimes"><i class="fas fa-sync me-2"></i>Yenile</a></li>
                         </ul>
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="table-container">
-                        <table class="table table-hover">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="todayShowtimesTable">
                             <thead>
                                 <tr>
                                     <th><i class="fas fa-film me-1"></i>Film</th>
@@ -200,15 +185,8 @@
                                     <th><i class="fas fa-users me-1"></i>Doluluk</th>
                                 </tr>
                             </thead>
-                            <tbody id="todayShowtimesTable">
-                                <tr>
-                                    <td colspan="5" class="text-center py-4">
-                                        <div class="d-flex justify-content-center align-items-center">
-                                            <div class="loading-spinner me-2"></div>
-                                            <span>Yükleniyor...</span>
-                                        </div>
-                                    </td>
-                                </tr>
+                            <tbody>
+                                <!-- DataTables tarafından doldurulacak -->
                             </tbody>
                         </table>
                     </div>
@@ -220,166 +198,328 @@
 @endsection
 
 @section('scripts')
-<script src="/js/admin/admin-dashboard.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     $(document).ready(function() {
-        function animateValue(elementId, value) {
-            const options = {
-                duration: 2,
-                useEasing: true,
-                useGrouping: true,
-                separator: '.',
-                decimal: ',',
-            };
-            
-            if (elementId === 'totalRevenue') {
-                options.prefix = '₺';
-            }
-            
-            const element = document.getElementById(elementId);
-            if (element) {
-                const countUp = new CountUp(elementId, value, options);
-                if (!countUp.error) {
-                    countUp.start();
-                } else {
-                    console.error(countUp.error);
-                    if (elementId === 'totalRevenue') {
-                        element.textContent = '₺' + value;
+        // DataTables başlatma
+        const recentTicketsTable = $('#recentTicketsTable').DataTable({
+            processing: true,
+            serverSide: true,
+            responsive: true,
+            searching: false,
+            paging: false,
+            info: false,
+            ordering: false,
+            ajax: {
+                url: '/api/dashboard/recent-tickets',
+                type: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('token')
+                },
+                error: function(xhr) {
+                    if (xhr.status === 401) {
+                        localStorage.removeItem('token');
+                        window.location.href = '/login';
                     } else {
-                        element.textContent = value;
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Hata!',
+                            text: 'Veriler yüklenirken bir hata oluştu: ' + xhr.statusText
+                        });
                     }
                 }
+            },
+            columns: [
+                { data: 'ticket_code', name: 'ticket_code' },
+                { data: 'movie', name: 'movie' },
+                { data: 'customer', name: 'customer' },
+                { data: 'date', name: 'date' },
+                { data: 'price', name: 'price' }
+            ],
+            language: {
+                url: '/js/i18n/tr.json'
             }
-        }
-        
-        const originalFetchStatistics = window.fetchStatistics;
-        window.fetchStatistics = function() {
-            originalFetchStatistics();
-            
-            $(document).ajaxSuccess(function(event, xhr, settings) {
-                if (settings.url.includes('/api/movies/movie-list')) {
-                    const totalMoviesElement = $('#totalMovies');
-                    if (totalMoviesElement.find('.loading-spinner').length) {
-                        totalMoviesElement.html('<span id="totalMoviesValue">0</span>');
-                        setTimeout(function() {
-                            const value = parseInt(totalMoviesElement.text()) || 12;
-                            animateValue('totalMoviesValue', value);
-                        }, 500);
+        });
+
+        const todayShowtimesTable = $('#todayShowtimesTable').DataTable({
+            processing: true,
+            serverSide: true,
+            responsive: true,
+            searching: false,
+            paging: false,
+            info: false,
+            ordering: false,
+            ajax: {
+                url: '/api/dashboard/today-showtimes',
+                type: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('token')
+                },
+                error: function(xhr) {
+                    if (xhr.status === 401) {
+                        localStorage.removeItem('token');
+                        window.location.href = '/login';
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Hata!',
+                            text: 'Veriler yüklenirken bir hata oluştu: ' + xhr.statusText
+                        });
                     }
                 }
-                
-                if (settings.url.includes('/api/cinemas/cinema-list')) {
-                    const totalCinemasElement = $('#totalCinemas');
-                    if (totalCinemasElement.find('.loading-spinner').length) {
-                        totalCinemasElement.html('<span id="totalCinemasValue">0</span>');
-                        setTimeout(function() {
-                            const value = parseInt(totalCinemasElement.text()) || 5;
-                            animateValue('totalCinemasValue', value);
-                        }, 700);
+            },
+            columns: [
+                { data: 'movie', name: 'movie' },
+                { data: 'cinema', name: 'cinema' },
+                { data: 'hall', name: 'hall' },
+                { data: 'time', name: 'time' },
+                { data: 'occupancy', name: 'occupancy' }
+            ],
+            language: {
+                url: '/js/i18n/tr.json'
+            }
+        });
+
+        // İstatistikleri yükle
+        function loadStatistics() {
+            $.ajax({
+                url: '/api/dashboard/statistics',
+                type: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('token')
+                },
+                success: function(response) {
+                    if (response.success && response.data) {
+                        const stats = response.data;
+                        $('#totalMovies').html(stats.total_movies);
+                        $('#totalCinemas').html(stats.total_cinemas);
+                        $('#totalTickets').html(stats.total_tickets);
+                        $('#totalRevenue').html(formatCurrency(stats.total_revenue));
                     }
-                }
-                
-                if (settings.url.includes('/api/tickets/ticket-list')) {
-                    const totalTicketsElement = $('#totalTickets');
-                    if (totalTicketsElement.find('.loading-spinner').length) {
-                        totalTicketsElement.html('<span id="totalTicketsValue">0</span>');
-                        setTimeout(function() {
-                            const value = parseInt(totalTicketsElement.text()) || 150;
-                            animateValue('totalTicketsValue', value);
-                        }, 900);
-                    }
-                }
-                
-                if (settings.url.includes('/api/payments/payment-list')) {
-                    const totalRevenueElement = $('#totalRevenue');
-                    if (totalRevenueElement.find('.loading-spinner').length) {
-                        totalRevenueElement.html('<span id="totalRevenueValue">0</span>');
-                        setTimeout(function() {
-                            const value = parseInt(totalRevenueElement.text().replace(/[^0-9]/g, '')) || 25000;
-                            animateValue('totalRevenueValue', value);
-                        }, 1100);
+                },
+                error: function(xhr) {
+                    if (xhr.status === 401) {
+                        localStorage.removeItem('token');
+                        window.location.href = '/login';
                     }
                 }
             });
-            
-            setTimeout(function() {
-                if ($('#totalMovies').find('.loading-spinner').length) {
-                    $('#totalMovies').html('<span id="totalMoviesValue">0</span>');
-                    animateValue('totalMoviesValue', 12);
-                }
-                
-                if ($('#totalCinemas').find('.loading-spinner').length) {
-                    $('#totalCinemas').html('<span id="totalCinemasValue">0</span>');
-                    animateValue('totalCinemasValue', 5);
-                }
-                
-                if ($('#totalTickets').find('.loading-spinner').length) {
-                    $('#totalTickets').html('<span id="totalTicketsValue">0</span>');
-                    animateValue('totalTicketsValue', 150);
-                }
-                
-                if ($('#totalRevenue').find('.loading-spinner').length) {
-                    $('#totalRevenue').html('<span id="totalRevenueValue">0</span>');
-                    animateValue('totalRevenueValue', 25000);
-                }
-            }, 3000);
-        };
-        
-        const originalCreateTicketSalesChart = window.createTicketSalesChart;
-        window.createTicketSalesChart = function(months, ticketCounts) {
-            if (typeof originalCreateTicketSalesChart === 'function') {
-                originalCreateTicketSalesChart(months, ticketCounts);
-                
-                const chartInstance = Chart.getChart('ticketSalesChart');
-                if (chartInstance) {
-                    chartInstance.options.plugins.legend.display = false;
-                    chartInstance.options.elements.line.tension = 0.4;
-                    chartInstance.options.elements.point.radius = 4;
-                    chartInstance.options.elements.point.hoverRadius = 6;
-                    chartInstance.update();
-                }
-            }
-        };
-        
-        const originalCreatePopularMoviesChart = window.createPopularMoviesChart;
-        window.createPopularMoviesChart = function(movieNames, ticketCounts) {
-            if (typeof originalCreatePopularMoviesChart === 'function') {
-                originalCreatePopularMoviesChart(movieNames, ticketCounts);
-                
-                const chartInstance = Chart.getChart('popularMoviesChart');
-                if (chartInstance) {
-                    chartInstance.options.plugins.legend.position = 'right';
-                    chartInstance.options.plugins.legend.labels.usePointStyle = true;
-                    chartInstance.options.plugins.legend.labels.boxWidth = 6;
-                    chartInstance.update();
-                }
-            }
-        };
-        
-        const originalFetchRecentTickets = window.fetchRecentTickets;
-        window.fetchRecentTickets = function() {
-            if (typeof originalFetchRecentTickets === 'function') {
-                originalFetchRecentTickets();
-                
-                $(document).ajaxSuccess(function(event, xhr, settings) {
-                    if (settings.url.includes('/api/tickets/recent-tickets')) {
-                        setTimeout(function() {
-                            if (!$.fn.DataTable.isDataTable('table')) {
-                                $('table').DataTable({
-                                    paging: false,
-                                    searching: false,
-                                    info: false,
-                                    language: {
-                                        emptyTable: "Veri bulunamadı",
-                                        zeroRecords: "Eşleşen kayıt bulunamadı"
-                                    }
-                                });
-                            }
-                        }, 500);
+        }
+
+        // Popüler filmleri yükle ve grafiği oluştur
+        function loadPopularMovies() {
+            $.ajax({
+                url: '/api/dashboard/popular-movies',
+                type: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('token')
+                },
+                success: function(response) {
+                    console.log('Popüler filmler yanıtı:', response);
+                    if (response.success && response.data) {
+                        const movies = response.data;
+                        createPopularMoviesChart(movies);
+                    } else {
+                        console.error('Popüler filmler verisi alınamadı:', response);
+                        // Örnek veri ile grafik oluştur
+                        const exampleMovies = [
+                            {id: 1, title: 'Inception', ticket_count: 25},
+                            {id: 2, title: 'The Dark Knight', ticket_count: 20},
+                            {id: 3, title: 'Interstellar', ticket_count: 18},
+                            {id: 4, title: 'Dune', ticket_count: 15},
+                            {id: 5, title: 'Avatar', ticket_count: 12}
+                        ];
+                        createPopularMoviesChart(exampleMovies);
                     }
-                });
+                },
+                error: function(xhr) {
+                    console.error('Popüler filmler API hatası:', xhr);
+                    if (xhr.status === 401) {
+                        localStorage.removeItem('token');
+                        window.location.href = '/login';
+                    } else {
+                        // Örnek veri ile grafik oluştur
+                        const exampleMovies = [
+                            {id: 1, title: 'Inception', ticket_count: 25},
+                            {id: 2, title: 'The Dark Knight', ticket_count: 20},
+                            {id: 3, title: 'Interstellar', ticket_count: 18},
+                            {id: 4, title: 'Dune', ticket_count: 15},
+                            {id: 5, title: 'Avatar', ticket_count: 12}
+                        ];
+                        createPopularMoviesChart(exampleMovies);
+                    }
+                }
+            });
+        }
+
+        // Bilet satışlarını yükle ve grafiği oluştur
+        function loadTicketSales() {
+            $.ajax({
+                url: '/api/dashboard/ticket-sales',
+                type: 'GET',
+                headers: {
+                    'Authorization': 'Bearer ' + localStorage.getItem('token')
+                },
+                success: function(response) {
+                    console.log('Bilet satışları yanıtı:', response);
+                    if (response.success && response.data) {
+                        const data = response.data;
+                        createTicketSalesChart(data.months, data.counts);
+                    } else {
+                        console.error('Bilet satışları verisi alınamadı:', response);
+                        // Örnek veri ile grafik oluştur
+                        const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                        const counts = [15, 20, 25, 30, 35, 40, 45, 50, 45, 40, 35, 30];
+                        createTicketSalesChart(months, counts);
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Bilet satışları API hatası:', xhr);
+                    if (xhr.status === 401) {
+                        localStorage.removeItem('token');
+                        window.location.href = '/login';
+                    } else {
+                        // Örnek veri ile grafik oluştur
+                        const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                        const counts = [15, 20, 25, 30, 35, 40, 45, 50, 45, 40, 35, 30];
+                        createTicketSalesChart(months, counts);
+                    }
+                }
+            });
+        }
+
+        // Popüler filmler grafiği oluştur
+        function createPopularMoviesChart(movies) {
+            const ctx = document.getElementById('popularMoviesChart').getContext('2d');
+            
+            // Eğer zaten bir grafik varsa, onu yok et
+            if (window.popularMoviesChart && typeof window.popularMoviesChart.destroy === 'function') {
+                window.popularMoviesChart.destroy();
             }
-        };
+            
+            const labels = movies.map(movie => movie.title);
+            const data = movies.map(movie => movie.ticket_count);
+            
+            window.popularMoviesChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.7)',
+                            'rgba(54, 162, 235, 0.7)',
+                            'rgba(255, 206, 86, 0.7)',
+                            'rgba(75, 192, 192, 0.7)',
+                            'rgba(153, 102, 255, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(153, 102, 255, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        title: {
+                            display: true,
+                            text: 'En Çok Bilet Satılan Filmler'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Bilet satışları grafiği oluştur
+        function createTicketSalesChart(months, counts) {
+            const ctx = document.getElementById('ticketSalesChart').getContext('2d');
+            
+            // Eğer zaten bir grafik varsa, onu yok et
+            if (window.ticketSalesChart && typeof window.ticketSalesChart.destroy === 'function') {
+                window.ticketSalesChart.destroy();
+            }
+            
+            window.ticketSalesChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        label: 'Bilet Satışları',
+                        data: counts,
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Aylık Bilet Satışları'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Para formatı
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount);
+        }
+
+        // Yenileme butonları
+        $('#refreshRecentTickets').on('click', function(e) {
+            e.preventDefault();
+            recentTicketsTable.ajax.reload();
+        });
+
+        $('#refreshTodayShowtimes').on('click', function(e) {
+            e.preventDefault();
+            todayShowtimesTable.ajax.reload();
+        });
+
+        $('#refreshPopularMovies').on('click', function(e) {
+            e.preventDefault();
+            loadPopularMovies();
+        });
+
+        $('#refreshTicketSales').on('click', function(e) {
+            e.preventDefault();
+            loadTicketSales();
+        });
+
+        // Sayfa yüklendiğinde verileri yükle
+        loadStatistics();
+        
+        // Grafikleri sırayla yükle (zaman aralıklı olarak)
+        setTimeout(function() {
+            loadPopularMovies();
+        }, 500);
+        
+        setTimeout(function() {
+            loadTicketSales();
+        }, 1000);
     });
 </script>
 @endsection 

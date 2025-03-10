@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Showtime;
 use App\Repositories\ShowtimeRepository;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Builder;
 
 class ShowtimeService
 {
@@ -90,5 +91,15 @@ class ShowtimeService
     public function deleteShowtime(int $id): bool
     {
         return $this->showtimeRepository->delete($id);
+    }
+
+    /**
+     * DataTables için seans sorgusu oluştur
+     *
+     * @return Builder
+     */
+    public function getShowtimesQuery(): Builder
+    {
+        return Showtime::with(['movie', 'cinemaHall.cinema']);
     }
 } 

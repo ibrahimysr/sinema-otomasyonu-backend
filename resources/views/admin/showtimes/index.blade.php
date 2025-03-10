@@ -66,7 +66,7 @@
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table class="table table-hover" id="showtimesTable">
                     <thead>
                         <tr>
                             <th><i class="fas fa-hashtag me-2"></i>ID</th>
@@ -134,18 +134,25 @@
                         </div>
                     </div>
                     <div class="row mb-3">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label for="date" class="form-label">Tarih</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fas fa-calendar"></i></span>
                             <input type="date" class="form-control" id="date" name="date" required>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <label for="time" class="form-label">Saat</label>
+                        <div class="col-md-4">
+                            <label for="start_time" class="form-label">Başlangıç Saati</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fas fa-clock"></i></span>
-                            <input type="time" class="form-control" id="time" name="time" required>
+                            <input type="time" class="form-control" id="start_time" name="start_time" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="end_time" class="form-label">Bitiş Saati</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-clock"></i></span>
+                            <input type="time" class="form-control" id="end_time" name="end_time" required>
                             </div>
                         </div>
                     </div>
@@ -217,18 +224,25 @@
                         </div>
                     </div>
                     <div class="row mb-3">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <label for="edit_date" class="form-label">Tarih</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fas fa-calendar"></i></span>
                             <input type="date" class="form-control" id="edit_date" name="date" required>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <label for="edit_time" class="form-label">Saat</label>
+                        <div class="col-md-4">
+                            <label for="edit_start_time" class="form-label">Başlangıç Saati</label>
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fas fa-clock"></i></span>
-                            <input type="time" class="form-control" id="edit_time" name="time" required>
+                            <input type="time" class="form-control" id="edit_start_time" name="start_time" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="edit_end_time" class="form-label">Bitiş Saati</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-clock"></i></span>
+                            <input type="time" class="form-control" id="edit_end_time" name="end_time" required>
                             </div>
                         </div>
                     </div>

@@ -8,6 +8,9 @@ use App\Http\Requests\UpdateCinemaRequest;
 use App\Services\CinemaService;
 use App\Services\ResponseService;
 use Illuminate\Http\JsonResponse;
+use Yajra\DataTables\Facades\DataTables;
+use App\Models\Cinema;
+use Illuminate\Http\Request;
 
 class CinemaController extends Controller
 {
@@ -118,5 +121,48 @@ class CinemaController extends Controller
         }
         
         return $this->responseService->success(null, 'Sinema başarıyla silindi.');
+    }
+
+    public function getCinemas(Request $request)
+    {
+        $query = Cinema::with('city'); // Şehir ilişkisi varsa
+
+        if ($request->has('name') && $request->name) {
+            $query->where('name', 'like', '%' . $request->name . '%');
+        }
+        if ($request->has('city_id') && $request->city_id) {
+            $query->where('city_id', $request->city_id);
+        }
+
+        return DataTables::of($query)
+            ->addColumn('name', function ($cinema) {
+                return $cinema->name;
+            })
+            ->addColumn('city', function ($cinema) {
+                return $cinema->city ? $cinema->city->name : '-';
+            })
+            ->addColumn('address', function ($cinema) {
+                return $cinema->address ?: '-';
+            })
+            ->addColumn('phone', function ($cinema) {
+                return $cinema->phone ?: '-';
+            })
+            ->addColumn('total_capacity', function ($cinema) {
+                return $cinema->total_capacity ?: '0';
+            })
+            ->addColumn('actions', function ($cinema) {
+                return '
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-info edit-cinema" data-id="' . $cinema->id . '">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-danger delete-cinema" data-id="' . $cinema->id . '" data-name="' . htmlspecialchars($cinema->name) . '">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                ';
+            })
+            ->rawColumns(['actions'])
+            ->make(true);
     }
 }

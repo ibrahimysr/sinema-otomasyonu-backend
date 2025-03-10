@@ -1,4 +1,3 @@
-
 $(document).ready(function() {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -8,19 +7,78 @@ $(document).ready(function() {
     
     loadCinemas();
     
-    fetchHalls();
+    const table = $('#hallsTable').DataTable({
+        processing: true,
+        serverSide: true,
+        responsive: true,
+        searching: false, 
+        ajax: {
+            url: '/api/cinema-halls/datatable',
+            type: 'GET',
+            headers: {
+                'Authorization': 'Bearer ' + token
+            },
+            data: function(d) {
+                d.name = $('#searchName').val();
+                d.cinema_id = $('#searchCinema').val();
+                d.min_capacity = $('#searchCapacity').val();
+            },
+            error: function(xhr) {
+                if (xhr.status === 401) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login';
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Hata!',
+                        text: 'Veriler yüklenirken bir hata oluştu: ' + xhr.statusText
+                    });
+                }
+            }
+        },
+        columns: [
+            { data: 'id', name: 'id' },
+            { data: 'name', name: 'name' },
+            { data: 'cinema_name', name: 'cinema.name', orderable: false },
+            { data: 'type', name: 'type', orderable: false },
+            { data: 'capacity', name: 'capacity', orderable: false },
+            { data: 'actions', name: 'actions', orderable: false, searchable: false }
+        ],
+        language: {
+            url: '/js/i18n/tr.json' 
+        },
+        drawCallback: function() {
+            $('#hallsTable tbody tr').addClass('animate__animated animate__fadeIn');
+        }
+    });
     
     $('#searchForm').on('submit', function(e) {
         e.preventDefault();
-        fetchHalls();
+        table.draw();
+    });
+    
+    $('#searchName').on('keyup', function() {
+        table.draw();
+    });
+
+    $('#searchCinema').on('change', function() {
+        table.draw();
+    });
+
+    $('#searchCapacity').on('change', function() {
+        table.draw();
     });
     
     $('#resetSearch').on('click', function() {
         $('#searchName').val('');
         $('#searchCinema').val('');
         $('#searchCapacity').val('');
-        fetchHalls();
+        table.draw();
     });
+    
+    function fetchHalls() {
+        $('#hallsTable').DataTable().ajax.reload();
+    }
     
     $('#saveHallBtn').on('click', function() {
         saveHall();
@@ -32,6 +90,17 @@ $(document).ready(function() {
     
     $('#confirmDeleteBtn').on('click', function() {
         deleteHall();
+    });
+
+    $(document).on('click', '.edit-hall', function() {
+        const hallId = $(this).data('id');
+        editHall(hallId);
+    });
+
+    $(document).on('click', '.delete-hall', function() {
+        const hallId = $(this).data('id');
+        const hallName = $(this).data('name');
+        confirmDelete(hallId, hallName);
     });
 });
 
@@ -68,102 +137,6 @@ function loadCinemas() {
                 title: 'Hata!',
                 text: 'Sinemalar yüklenirken bir hata oluştu'
             });
-        }
-    });
-}
-
-function fetchHalls() {
-    const token = localStorage.getItem('token');
-    const name = $('#searchName').val();
-    const cinema = $('#searchCinema').val();
-    const capacity = $('#searchCapacity').val();
-    
-    $.ajax({
-        url: '/api/cinema-halls/hall-list',
-        type: 'GET',
-        data: {
-            name: name,
-            cinema_id: cinema,
-            min_capacity: capacity
-        },
-        headers: {
-            'Authorization': 'Bearer ' + token
-        },
-        beforeSend: function() {
-            $('#hallsList').html(`
-                <tr>
-                    <td colspan="4" class="text-center">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Yükleniyor...</span>
-                        </div>
-                    </td>
-                </tr>
-            `);
-        },
-        success: function(response) {
-            if (!response.success || !response.data) {
-                $('#hallsList').html('<tr><td colspan="4" class="text-center">Veri yüklenirken bir hata oluştu</td></tr>');
-                return;
-            }
-            
-            const halls = response.data;
-            
-            if (halls.length === 0) {
-                $('#hallsList').html('<tr><td colspan="4" class="text-center">Salon bulunamadı</td></tr>');
-                return;
-            }
-            
-            let html = '';
-            
-            halls.forEach(hall => {
-                html += `
-                    <tr class="animate__animated animate__fadeIn">
-                        <td>${hall.id}</td>
-                        <td>
-                            <div class="d-flex align-items-center">
-                                <div class="bg-light rounded-circle me-2 d-flex align-items-center justify-content-center" style="width:40px;height:40px;">
-                                    <i class="fas fa-door-open text-secondary"></i>
-                                </div>
-                                <div>
-                                    <span class="d-block">${hall.name}</span>
-                                    <small class="text-muted">${hall.cinema ? hall.cinema.name : '-'}</small>
-                                </div>
-                            </div>
-                        </td>
-                        <td>
-                            <span class="badge ${getBadgeClass(hall.type)}">
-                                <i class="fas fa-film me-1"></i>${hall.type || '-'}
-                            </span>
-                        </td>
-                        <td>
-                            <span class="badge bg-info">
-                                <i class="fas fa-users me-1"></i>${hall.capacity} Kişi
-                            </span>
-                        </td>
-                        <td>
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-sm btn-primary" onclick="editHall(${hall.id})">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete(${hall.id}, '${hall.name}')">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            });
-            
-            $('#hallsList').html(html);
-        },
-        error: function(xhr) {
-            if (xhr.status === 401) {
-                localStorage.removeItem('token');
-                window.location.href = '/login';
-                return;
-            }
-            
-            $('#hallsList').html('<tr><td colspan="4" class="text-center">Veri yüklenirken bir hata oluştu</td></tr>');
         }
     });
 }

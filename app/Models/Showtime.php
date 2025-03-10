@@ -57,4 +57,14 @@ class Showtime extends Model
     {
         return $this->belongsTo(CinemaHall::class);
     }
+
+    /**
+     * Seansa ait biletler
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function tickets()
+    {
+        return $this->hasMany(Ticket::class);
+    }
 } 

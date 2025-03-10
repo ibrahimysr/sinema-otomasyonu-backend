@@ -1,13 +1,13 @@
-
 $(document).ready(function() {
     const API_URL = '/api';
     const TICKETS_API = `${API_URL}/tickets/ticket-list`;
+    const TICKETS_DATATABLE_API = `${API_URL}/tickets/datatable`;
     const TICKET_ADD_API = `${API_URL}/tickets/ticket-add`;
     const TICKET_UPDATE_API = `${API_URL}/tickets/ticket-update`;
     const TICKET_DELETE_API = `${API_URL}/tickets/ticket-delete`;
     const SHOWTIMES_API = `${API_URL}/showtimes/showtime-list`;
     const USERS_API = `${API_URL}/users/user-list`;
-    const MOVIES_API = `${API_URL}/movies/movie-list`;
+    const MOVIES_API = `${API_URL}/movies/all-movies`;
 
     const token = localStorage.getItem('token');
     if (!token) {
@@ -15,7 +15,57 @@ $(document).ready(function() {
         return;
     }
 
-    const ticketsTableBody = $('#ticketsTableBody');
+    const table = $('#ticketsTable').DataTable({
+        processing: true,
+        serverSide: true,
+        responsive: true,
+        searching: false, 
+        ajax: {
+            url: TICKETS_DATATABLE_API,
+            type: 'GET',
+            headers: {
+                'Authorization': 'Bearer ' + token
+            },
+            data: function(d) {
+                d.ticket_code = $('#searchTicketCode').val();
+                d.movie_id = $('#searchMovie').val();
+                d.date = $('#searchDate').val();
+                d.status = $('#searchStatus').val();
+            },
+            error: function(xhr) {
+                if (xhr.status === 401) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login';
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Hata!',
+                        text: 'Veriler yüklenirken bir hata oluştu: ' + xhr.statusText
+                    });
+                }
+            }
+        },
+        columns: [
+            { data: 'id', name: 'id' },
+            { data: 'ticket_code', name: 'ticket_code', orderable: false },
+            { data: 'movie', name: 'showtime.movie.title', orderable: false },
+            { data: 'cinema', name: 'showtime.cinemaHall.cinema.name', orderable: false },
+            { data: 'hall', name: 'showtime.cinemaHall.name', orderable: false },
+            { data: 'showtime', name: 'showtime.start_time', orderable: true },
+            { data: 'seat', name: 'seat_number', orderable: false },
+            { data: 'customer', name: 'user.name', orderable: false },
+            { data: 'price', name: 'price', orderable: true },
+            { data: 'status', name: 'status', orderable: true },
+            { data: 'actions', name: 'actions', orderable: false, searchable: false }
+        ],
+        language: {
+            url: '/js/i18n/tr.json' 
+        },
+        drawCallback: function() {
+            $('#ticketsTable tbody tr').addClass('animate__animated animate__fadeIn');
+            updateStats();
+        }
+    });
     
     const addTicketForm = $('#addTicketForm');
     const editTicketForm = $('#editTicketForm');
@@ -28,165 +78,80 @@ $(document).ready(function() {
     const editShowtimeSelect = $('#edit_showtime_id');
     const editUserSelect = $('#edit_user_id');
     
-    loadTickets();
-    
     loadMovies();
     
     $('#searchForm').on('submit', function(e) {
         e.preventDefault();
-        loadTickets();
+        table.draw();
+    });
+    
+    $('#searchTicketCode').on('keyup', function() {
+        table.draw();
+    });
+    
+    $('#searchMovie, #searchStatus').on('change', function() {
+        table.draw();
+    });
+    
+    $('#searchDate').on('change', function() {
+        table.draw();
     });
     
     $('#resetSearch').on('click', function() {
         $('#searchForm')[0].reset();
-        loadTickets();
+        table.draw();
     });
     
     $('#refreshTickets').on('click', function() {
-        loadTickets();
+        table.ajax.reload();
     });
     
     $('#printTicketBtn').on('click', function() {
         printTicket();
     });
     
-    function loadTickets() {
-        ticketsTableBody.html(`
-            <tr>
-                <td colspan="11" class="text-center py-4">
-                    <div class="d-flex justify-content-center align-items-center">
-                        <div class="loading-spinner me-2"></div>
-                        <span>Yükleniyor...</span>
-                    </div>
-                </td>
-            </tr>
-        `);
-        
-        const searchParams = {
-            ticket_code: $('#searchTicketCode').val(),
-            movie_id: $('#searchMovie').val(),
-            date: $('#searchDate').val(),
-            status: $('#searchStatus').val()
-        };
-        
+    function updateStats() {
         $.ajax({
             url: TICKETS_API,
             type: 'GET',
-            data: searchParams,
             headers: {
                 'Authorization': 'Bearer ' + token
             },
             success: function(response) {
-                if (response.success && response.data && response.data.length > 0) {
-                    displayTickets(response.data);
-                    
-                    if (response.stats) {
-                        updateStats(response.stats);
-                    } else {
-                        calculateStats(response.data);
-                    }
-                } else {
-                    ticketsTableBody.html(`
-                        <tr>
-                            <td colspan="11" class="text-center py-4">
-                                <div class="alert alert-info mb-0">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    Bilet bulunamadı
-                                </div>
-                            </td>
-                        </tr>
-                    `);
-                    
-                    updateStats({
-                        total: 0,
-                        completed: 0,
-                        pending: 0,
-                        cancelled: 0
-                    });
+                if (response.success && response.data) {
+                    calculateStats(response.data);
                 }
-            },
-            error: function(xhr) {
-                if (xhr.status === 401) {
-                    localStorage.removeItem('token');
-                    window.location.href = '/login';
-                    return;
-                }
-                
-                ticketsTableBody.html(`
-                    <tr>
-                        <td colspan="11" class="text-center py-4">
-                            <div class="alert alert-danger mb-0">
-                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                Biletler yüklenirken bir hata oluştu
-                            </div>
-                        </td>
-                    </tr>
-                `);
             }
         });
     }
-
-    function displayTickets(tickets) {
-        ticketsTableBody.empty();
-        
-        tickets.forEach(ticket => {
-            const statusClass = getStatusClass(ticket.status);
-            const statusText = getStatusText(ticket.status);
-            
-            const row = $(`
-                <tr class="animate__animated animate__fadeIn">
-                    <td>${ticket.id}</td>
-                    <td><span class="badge bg-secondary">${ticket.ticket_code || 'Bilinmiyor'}</span></td>
-                    <td>
-                        <div class="d-flex align-items-center">
-                            <div class="movie-poster me-2">
-                                <img src="${ticket.showtime?.movie?.poster_url || '/img/no-poster.jpg'}" alt="${ticket.showtime?.movie?.title || 'Film'}" class="img-thumbnail" width="40">
-                            </div>
-                            <div>${ticket.showtime?.movie?.title || 'Bilinmiyor'}</div>
-                        </div>
-                    </td>
-                    <td>${ticket.showtime?.cinema_hall?.cinema?.name || 'Bilinmiyor'}</td>
-                    <td>${ticket.showtime?.cinema_hall?.name || 'Bilinmiyor'}</td>
-                    <td>${formatDateTime(ticket.showtime?.start_time) || 'Bilinmiyor'}</td>
-                    <td><span class="badge bg-info">${ticket.seat_number}</span></td>
-                    <td>${ticket.user?.name || 'Bilinmiyor'}</td>
-                    <td>${formatCurrency(ticket.price)}</td>
-                    <td><span class="badge bg-${statusClass}">${statusText}</span></td>
-                    <td>
-                        <div class="btn-group">
-                            <button class="btn btn-sm btn-info view-ticket" data-id="${ticket.id}" title="Görüntüle">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="btn btn-sm btn-primary edit-ticket" data-id="${ticket.id}" title="Düzenle">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-sm btn-danger delete-ticket" data-id="${ticket.id}" title="Sil">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `);
-            
-            ticketsTableBody.append(row);
-        });
-        
-        $('.view-ticket').on('click', function() {
-            const ticketId = $(this).data('id');
-            viewTicket(ticketId);
-        });
-        
-        $('.edit-ticket').on('click', function() {
-            const ticketId = $(this).data('id');
-            editTicket(ticketId);
-        });
-        
-        $('.delete-ticket').on('click', function() {
-            const ticketId = $(this).data('id');
-            $('#delete_ticket_id').val(ticketId);
-            $('#deleteTicketModal').modal('show');
-        });
-    }
+    
+    $(document).on('click', '.view-ticket', function() {
+        const ticketId = $(this).data('id');
+        viewTicket(ticketId);
+    });
+    
+    $(document).on('click', '.edit-ticket', function() {
+        const ticketId = $(this).data('id');
+        editTicket(ticketId);
+    });
+    
+    $(document).on('click', '.delete-ticket', function() {
+        const ticketId = $(this).data('id');
+        const ticketCode = $(this).data('code');
+        confirmDelete(ticketId, ticketCode);
+    });
+    
+    saveTicketBtn.on('click', function() {
+        saveTicket();
+    });
+    
+    updateTicketBtn.on('click', function() {
+        updateTicket();
+    });
+    
+    confirmDeleteTicketBtn.on('click', function() {
+        deleteTicket();
+    });
     
     function loadMovies() {
         $.ajax({
@@ -214,7 +179,7 @@ $(document).ready(function() {
         });
     }
 
-    function fetchShowtimes() {
+    function fetchShowtimes(selectedShowtimeId = null) {
         fetch(SHOWTIMES_API, {
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -229,7 +194,7 @@ $(document).ready(function() {
         })
         .then(data => {
             if (data.success && data.data.length > 0) {
-                populateShowtimeSelects(data.data);
+                populateShowtimeSelects(data.data, selectedShowtimeId);
             }
         })
         .catch(error => {
@@ -238,7 +203,7 @@ $(document).ready(function() {
         });
     }
 
-    function fetchUsers() {
+    function fetchUsers(selectedUserId = null) {
         fetch(USERS_API, {
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -253,7 +218,7 @@ $(document).ready(function() {
         })
         .then(data => {
             if (data.success && data.data.length > 0) {
-                populateUserSelects(data.data);
+                populateUserSelects(data.data, selectedUserId);
             }
         })
         .catch(error => {
@@ -262,143 +227,38 @@ $(document).ready(function() {
         });
     }
 
-    function populateShowtimeSelects(showtimes) {
+    function populateShowtimeSelects(showtimes, selectedShowtimeId = null) {
         showtimeSelect.html('<option value="">Seans Seçin</option>');
         editShowtimeSelect.html('<option value="">Seans Seçin</option>');
         
         showtimes.forEach(showtime => {
-            const option = `<option value="${showtime.id}">${showtime.movie?.title} - ${showtime.cinema_hall?.cinema?.name} - ${showtime.cinema_hall?.name} - ${formatDateTime(showtime.start_time)}</option>`;
+            const option = `<option value="${showtime.id}" ${selectedShowtimeId && selectedShowtimeId == showtime.id ? 'selected' : ''}>${showtime.movie?.title} - ${showtime.cinema_hall?.cinema?.name} - ${showtime.cinema_hall?.name} - ${formatDateTime(showtime.start_time)}</option>`;
             
             showtimeSelect.append(option);
             editShowtimeSelect.append(option);
         });
+        
+        if (selectedShowtimeId) {
+            editShowtimeSelect.val(selectedShowtimeId);
+        }
     }
 
-    function populateUserSelects(users) {
+    function populateUserSelects(users, selectedUserId = null) {
         userSelect.html('<option value="">Müşteri Seçin</option>');
         editUserSelect.html('<option value="">Müşteri Seçin</option>');
         
         users.forEach(user => {
-            const option = `<option value="${user.id}">${user.name} (${user.email})</option>`;
+            const option = `<option value="${user.id}" ${selectedUserId && selectedUserId == user.id ? 'selected' : ''}>${user.name} (${user.email})</option>`;
             
             userSelect.append(option);
             editUserSelect.append(option);
         });
-    }
-
-    saveTicketBtn.on('click', function() {
-        const formData = new FormData(addTicketForm[0]);
-        const ticketData = {
-            showtime_id: formData.get('showtime_id'),
-            user_id: formData.get('user_id'),
-            seat_number: formData.get('seat_number'),
-            price: formData.get('price'),
-            status: formData.get('status')
-        };
         
-        $.ajax({
-            url: TICKET_ADD_API,
-            type: 'POST',
-            data: JSON.stringify(ticketData),
-            contentType: 'application/json',
-            headers: {
-                'Authorization': 'Bearer ' + token
-            },
-            success: function(response) {
-                if (response.success) {
-                    $('#addTicketModal').modal('hide');
-                    addTicketForm[0].reset();
-                    
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Başarılı!',
-                        text: 'Bilet başarıyla eklendi',
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
-                    
-                    loadTickets();
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Hata!',
-                        text: response.message || 'Bilet eklenirken bir hata oluştu'
-                    });
-                }
-            },
-            error: function(xhr) {
-                if (xhr.status === 401) {
-                    localStorage.removeItem('token');
-                    window.location.href = '/login';
-                    return;
-                }
-                
-                const errors = xhr.responseJSON?.errors;
-                if (errors) {
-                    Object.keys(errors).forEach(key => {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Hata!',
-                            text: errors[key][0]
-                        });
-                    });
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Hata!',
-                        text: 'Bilet eklenirken bir hata oluştu'
-                    });
-                }
-            }
-        });
-    });
-
-    function editTicket(ticketId) {
-        $.ajax({
-            url: `${API_URL}/tickets/ticket-detail/${ticketId}`,
-            type: 'GET',
-            headers: {
-                'Authorization': 'Bearer ' + token
-            },
-            success: function(response) {
-                if (response.success && response.data) {
-                    const ticket = response.data;
-                    
-                    $('#edit_ticket_id').val(ticket.id);
-                    $('#edit_showtime_id').val(ticket.showtime_id);
-                    $('#edit_user_id').val(ticket.user_id);
-                    $('#edit_seat_number').val(ticket.seat_number);
-                    $('#edit_price').val(ticket.price);
-                    $('#edit_status').val(ticket.status);
-                    
-                    fetchShowtimes();
-                    fetchUsers();
-                    
-                    $('#editTicketModal').modal('show');
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Hata!',
-                        text: 'Bilet bilgileri alınırken bir hata oluştu'
-                    });
-                }
-            },
-            error: function(xhr) {
-                if (xhr.status === 401) {
-                    localStorage.removeItem('token');
-                    window.location.href = '/login';
-                    return;
-                }
-                
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Hata!',
-                    text: 'Bilet bilgileri alınırken bir hata oluştu'
-                });
-            }
-        });
+        if (selectedUserId) {
+            editUserSelect.val(selectedUserId);
+        }
     }
-    
+
     function viewTicket(ticketId) {
         $.ajax({
             url: `${API_URL}/tickets/ticket-detail/${ticketId}`,
@@ -467,7 +327,141 @@ $(document).ready(function() {
         });
     }
 
-    updateTicketBtn.on('click', function() {
+    function editTicket(ticketId) {
+        $.ajax({
+            url: `${API_URL}/tickets/ticket-detail/${ticketId}`,
+            type: 'GET',
+            headers: {
+                'Authorization': 'Bearer ' + token
+            },
+            success: function(response) {
+                if (response.success && response.data) {
+                    const ticket = response.data;
+                    
+                    $('#editTicketModal').modal('show');
+                    
+                    const ticketData = {
+                        id: ticket.id,
+                        showtime_id: ticket.showtime_id,
+                        user_id: ticket.user_id,
+                        seat_number: ticket.seat_number,
+                        price: ticket.price,
+                        status: ticket.status
+                    };
+                    
+                    $('#edit_ticket_id').val(ticketData.id);
+                    $('#edit_seat_number').val(ticketData.seat_number);
+                    $('#edit_price').val(ticketData.price);
+                    $('#edit_status').val(ticketData.status);
+                    
+                    fetchShowtimes(ticketData.showtime_id);
+                    fetchUsers(ticketData.user_id);
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Hata!',
+                        text: 'Bilet bilgileri alınırken bir hata oluştu'
+                    });
+                }
+            },
+            error: function(xhr) {
+                if (xhr.status === 401) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login';
+                    return;
+                }
+                
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Hata!',
+                    text: 'Bilet bilgileri alınırken bir hata oluştu'
+                });
+            }
+        });
+    }
+
+    function saveTicket() {
+        const formData = new FormData(addTicketForm[0]);
+        const ticketData = {
+            showtime_id: formData.get('showtime_id'),
+            user_id: formData.get('user_id'),
+            seat_number: formData.get('seat_number'),
+            price: formData.get('price'),
+            status: formData.get('status')
+        };
+        
+        console.log('Gönderilen bilet verileri:', ticketData);
+        
+        $.ajax({
+            url: TICKET_ADD_API,
+            type: 'POST',
+            data: ticketData,
+            headers: {
+                'Authorization': 'Bearer ' + token
+            },
+            success: function(response) {
+                console.log('Başarılı yanıt:', response);
+                if (response.success) {
+                    $('#addTicketModal').modal('hide');
+                    addTicketForm[0].reset();
+                    
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Başarılı!',
+                        text: 'Bilet başarıyla eklendi',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                    
+                    table.ajax.reload();
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Hata!',
+                        text: response.message || 'Bilet eklenirken bir hata oluştu'
+                    });
+                }
+            },
+            error: function(xhr) {
+                console.error('Hata yanıtı:', xhr.responseJSON);
+                
+                if (xhr.status === 401) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login';
+                    return;
+                }
+                
+                const errors = xhr.responseJSON?.errors;
+                if (errors) {
+                    console.error('Doğrulama hataları:', errors);
+                    let errorMessage = '';
+                    Object.keys(errors).forEach(key => {
+                        errorMessage += errors[key][0] + '<br>';
+                    });
+                    
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Doğrulama Hatası!',
+                        html: errorMessage
+                    });
+                } else if (xhr.responseJSON?.message) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Hata!',
+                        text: xhr.responseJSON.message
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Hata!',
+                        text: 'Bilet eklenirken bir hata oluştu'
+                    });
+                }
+            }
+        });
+    }
+
+    function updateTicket() {
         const ticketId = $('#edit_ticket_id').val();
         const formData = new FormData(editTicketForm[0]);
         const ticketData = {
@@ -478,15 +472,17 @@ $(document).ready(function() {
             status: formData.get('status')
         };
         
+        console.log('Güncellenen bilet verileri:', ticketData);
+        
         $.ajax({
             url: `${TICKET_UPDATE_API}/${ticketId}`,
             type: 'POST',
-            data: JSON.stringify(ticketData),
-            contentType: 'application/json',
+            data: ticketData,
             headers: {
                 'Authorization': 'Bearer ' + token
             },
             success: function(response) {
+                console.log('Başarılı yanıt:', response);
                 if (response.success) {
                     $('#editTicketModal').modal('hide');
                     
@@ -498,7 +494,7 @@ $(document).ready(function() {
                         showConfirmButton: false
                     });
                     
-                    loadTickets();
+                    table.ajax.reload();
                 } else {
                     Swal.fire({
                         icon: 'error',
@@ -508,6 +504,8 @@ $(document).ready(function() {
                 }
             },
             error: function(xhr) {
+                console.error('Hata yanıtı:', xhr.responseJSON);
+                
                 if (xhr.status === 401) {
                     localStorage.removeItem('token');
                     window.location.href = '/login';
@@ -516,12 +514,22 @@ $(document).ready(function() {
                 
                 const errors = xhr.responseJSON?.errors;
                 if (errors) {
+                    console.error('Doğrulama hataları:', errors);
+                    let errorMessage = '';
                     Object.keys(errors).forEach(key => {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Hata!',
-                            text: errors[key][0]
-                        });
+                        errorMessage += errors[key][0] + '<br>';
+                    });
+                    
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Doğrulama Hatası!',
+                        html: errorMessage
+                    });
+                } else if (xhr.responseJSON?.message) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Hata!',
+                        text: xhr.responseJSON.message
                     });
                 } else {
                     Swal.fire({
@@ -532,9 +540,9 @@ $(document).ready(function() {
                 }
             }
         });
-    });
+    }
 
-    confirmDeleteTicketBtn.on('click', function() {
+    function deleteTicket() {
         const ticketId = $('#delete_ticket_id').val();
         
         $.ajax({
@@ -555,7 +563,7 @@ $(document).ready(function() {
                         showConfirmButton: false
                     });
                     
-                    loadTickets();
+                    table.ajax.reload();
                 } else {
                     Swal.fire({
                         icon: 'error',
@@ -578,7 +586,13 @@ $(document).ready(function() {
                 });
             }
         });
-    });
+    }
+    
+    function confirmDelete(ticketId, ticketCode) {
+        $('#delete_ticket_id').val(ticketId);
+        $('#deleteTicketName').text(ticketCode);
+        $('#deleteTicketModal').modal('show');
+    }
     
     function printTicket() {
         const ticketContent = document.getElementById('viewTicketModal').querySelector('.modal-body').innerHTML;
@@ -659,9 +673,9 @@ $(document).ready(function() {
 
     function getStatusClass(status) {
         switch (status) {
-            case 'completed':
+            case 'confirmed':
                 return 'success';
-            case 'pending':
+            case 'reserved':
                 return 'warning';
             case 'cancelled':
                 return 'danger';
@@ -672,10 +686,10 @@ $(document).ready(function() {
 
     function getStatusText(status) {
         switch (status) {
-            case 'completed':
-                return 'Tamamlandı';
-            case 'pending':
-                return 'Bekliyor';
+            case 'confirmed':
+                return 'Onaylandı';
+            case 'reserved':
+                return 'Rezerve Edildi';
             case 'cancelled':
                 return 'İptal Edildi';
             default:
@@ -684,28 +698,25 @@ $(document).ready(function() {
     }
     
     function calculateStats(tickets) {
-        const stats = {
-            total: tickets.length,
-            completed: 0,
-            pending: 0,
-            cancelled: 0
-        };
+        let total = tickets.length;
+        let confirmed = 0;
+        let reserved = 0;
+        let cancelled = 0;
         
         tickets.forEach(ticket => {
-            switch (ticket.status) {
-                case 'completed':
-                    stats.completed++;
-                    break;
-                case 'pending':
-                    stats.pending++;
-                    break;
-                case 'cancelled':
-                    stats.cancelled++;
-                    break;
+            if (ticket.status === 'confirmed') {
+                confirmed++;
+            } else if (ticket.status === 'reserved') {
+                reserved++;
+            } else if (ticket.status === 'cancelled') {
+                cancelled++;
             }
         });
         
-        updateStats(stats);
+        $('#totalTickets').text(total);
+        $('#completedTickets').text(confirmed);
+        $('#pendingTickets').text(reserved);
+        $('#cancelledTickets').text(cancelled);
     }
     
     function updateStats(stats) {
@@ -729,4 +740,39 @@ $(document).ready(function() {
     
     fetchShowtimes();
     fetchUsers();
+
+    $('#showtime_id').on('change', function() {
+        const showtimeId = $(this).val();
+        if (showtimeId) {
+            fetchShowtimePrice(showtimeId);
+        }
+    });
+    
+    $('#edit_showtime_id').on('change', function() {
+        const showtimeId = $(this).val();
+        if (showtimeId) {
+            fetchShowtimePrice(showtimeId, 'edit_');
+        }
+    });
+    
+    function fetchShowtimePrice(showtimeId, prefix = '') {
+        const token = localStorage.getItem('token');
+        
+        $.ajax({
+            url: `${API_URL}/showtimes/showtime-detail/${showtimeId}`,
+            type: 'GET',
+            headers: {
+                'Authorization': 'Bearer ' + token
+            },
+            success: function(response) {
+                if (response.success && response.data) {
+                    const showtime = response.data;
+                    $(`#${prefix}price`).val(showtime.price);
+                }
+            },
+            error: function(xhr) {
+                console.error('Seans fiyatı alınamadı:', xhr);
+            }
+        });
+    }
 }); 

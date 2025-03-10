@@ -9,6 +9,7 @@ use App\Services\ShowtimeService;
 use App\Services\ResponseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Yajra\DataTables\Facades\DataTables;
 
 class ShowtimeController extends Controller
 {
@@ -200,5 +201,91 @@ class ShowtimeController extends Controller
         }
         
         return $this->responseService->success(null, 'Seans başarıyla silindi.');
+    }
+
+    /**
+     * DataTables için seans verilerini getir
+     *
+     * @param Request $request
+     * @return mixed
+     */
+    public function getShowtimes(Request $request)
+    {
+        $query = $this->showtimeService->getShowtimesQuery();
+
+        if ($request->has('movie_id') && $request->movie_id) {
+            $query->where('movie_id', $request->movie_id);
+        }
+        if ($request->has('cinema_id') && $request->cinema_id) {
+            $query->whereHas('cinemaHall', function($q) use ($request) {
+                $q->where('cinema_id', $request->cinema_id);
+            });
+        }
+        if ($request->has('date') && $request->date) {
+            $query->whereDate('start_time', $request->date);
+        }
+
+        return DataTables::of($query)
+            ->addColumn('movie_title', function ($showtime) {
+                if ($showtime->movie) {
+                    return '<div class="d-flex align-items-center">
+                        <div class="bg-light rounded-circle me-2 d-flex align-items-center justify-content-center" style="width:30px;height:30px;">
+                            <i class="fas fa-film text-primary"></i>
+                        </div>
+                        <span>' . $showtime->movie->title . '</span>
+                    </div>';
+                }
+                return '<span class="text-muted">-</span>';
+            })
+            ->addColumn('cinema_hall', function ($showtime) {
+                if ($showtime->cinemaHall && $showtime->cinemaHall->cinema) {
+                    return '<div>
+                        <span class="d-block">' . $showtime->cinemaHall->cinema->name . '</span>
+                        <small class="text-muted">' . $showtime->cinemaHall->name . '</small>
+                    </div>';
+                }
+                return '<span class="text-muted">-</span>';
+            })
+            ->addColumn('date', function ($showtime) {
+                return '<span class="badge bg-info">
+                    <i class="fas fa-calendar me-1"></i>' . $showtime->start_time->format('d.m.Y') . '
+                </span>';
+            })
+            ->addColumn('time', function ($showtime) {
+                return '<span class="badge bg-primary">
+                    <i class="fas fa-clock me-1"></i>' . $showtime->start_time->format('H:i') . ' - ' . $showtime->end_time->format('H:i') . '
+                </span>';
+            })
+            ->addColumn('status', function ($showtime) {
+                $now = now();
+                $badgeClass = 'bg-success';
+                $statusText = 'Aktif';
+                
+                if ($showtime->start_time > $now) {
+                    $badgeClass = 'bg-info';
+                    $statusText = 'Yaklaşan';
+                } else if ($showtime->end_time < $now) {
+                    $badgeClass = 'bg-secondary';
+                    $statusText = 'Geçmiş';
+                }
+                
+                return '<span class="badge ' . $badgeClass . '">
+                    <i class="fas fa-check-circle me-1"></i>' . $statusText . '
+                </span>';
+            })
+            ->addColumn('actions', function ($showtime) {
+                return '
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-info edit-showtime" data-id="' . $showtime->id . '">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-danger delete-showtime" data-id="' . $showtime->id . '" data-name="' . htmlspecialchars($showtime->movie->title ?? 'Seans') . '">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                ';
+            })
+            ->rawColumns(['movie_title', 'cinema_hall', 'date', 'time', 'status', 'actions'])
+            ->make(true);
     }
 } 

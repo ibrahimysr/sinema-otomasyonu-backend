@@ -1,34 +1,92 @@
-
 $(document).ready(function() {
     const token = localStorage.getItem('token');
     if (!token) {
         window.location.href = '/login';
         return;
     }
-    
+
     loadCities();
-    
-    fetchCinemas();
-    
+
+    const table = $('#cinemasTable').DataTable({
+        processing: true,
+        serverSide: true,
+        responsive: true,
+        searching: false,
+        ajax: {
+            url: '/api/cinemas/datatable', 
+            type: 'GET',
+            headers: {
+                'Authorization': 'Bearer ' + token
+            },
+            data: function(d) {
+                d.name = $('#searchName').val();
+                d.city_id = $('#searchCity').val();
+            },
+            error: function(xhr) {
+                if (xhr.status === 401) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login';
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Hata!',
+                        text: 'Veriler yüklenirken bir hata oluştu: ' + xhr.statusText
+                    });
+                }
+            }
+        },
+        columns: [
+            { data: 'id', name: 'id' },
+            { data: 'name', name: 'name' },
+            { data: 'city', name: 'city.name' },
+            { data: 'address', name: 'address' },
+            { data: 'phone', name: 'phone' },
+            { data: 'total_capacity', name: 'total_capacity' },
+            { data: 'actions', name: 'actions', orderable: false, searchable: false }
+        ],
+        language: {
+            url: '/js/i18n/tr.json' // Yerel Türkçe dil dosyası
+        },
+        drawCallback: function() {
+            $('#cinemasTable tbody tr').addClass('animate__animated animate__fadeIn');
+        }
+    });
+
     $('#searchForm').on('submit', function(e) {
         e.preventDefault();
-        fetchCinemas();
+        table.draw();
     });
-    
+
+    $('#searchName').on('keyup', function() {
+        table.draw();
+    });
+
+    $('#searchCity').on('change', function() {
+        table.draw();
+    });
+
     $('#resetSearch').on('click', function() {
-        $('#searchName').val('');
-        $('#searchCity').val('');
-        fetchCinemas();
+        $('#searchForm')[0].reset();
+        table.draw();
     });
-    
+
+    $('#refreshTable').on('click', function() {
+        table.ajax.reload();
+    });
+
+    function fetchCinemas() {
+        $('#cinemasTable').DataTable().ajax.reload();
+    }
+
     $('#saveCinemaBtn').on('click', function() {
         saveCinema();
     });
-    
+
     $('#updateCinemaBtn').on('click', function() {
         updateCinema();
     });
-    
+
+    // Sinema silme onayı
     $('#confirmDeleteBtn').on('click', function() {
         deleteCinema();
     });
@@ -36,7 +94,6 @@ $(document).ready(function() {
 
 function loadCities() {
     const token = localStorage.getItem('token');
-    
     $.ajax({
         url: '/api/cities',
         type: 'GET',
@@ -47,114 +104,14 @@ function loadCities() {
             if (response.success && response.data) {
                 const cities = response.data;
                 let options = '<option value="">Tümü</option>';
-                
                 cities.forEach(city => {
                     options += `<option value="${city.id}">${city.name}</option>`;
                 });
-                
                 $('#searchCity, #city, #edit_city').html(options);
             }
         },
         error: function(xhr) {
-            if (xhr.status === 401) {
-                localStorage.removeItem('token');
-                window.location.href = '/login';
-                return;
-            }
-            
-            Swal.fire({
-                icon: 'error',
-                title: 'Hata!',
-                text: 'Şehirler yüklenirken bir hata oluştu'
-            });
-        }
-    });
-}
-
-function fetchCinemas() {
-    const token = localStorage.getItem('token');
-    const name = $('#searchName').val();
-    const city = $('#searchCity').val();
-    
-    $.ajax({
-        url: '/api/cinemas/cinema-list',
-        type: 'GET',
-        data: {
-            name: name,
-            city_id: city
-        },
-        headers: {
-            'Authorization': 'Bearer ' + token
-        },
-        beforeSend: function() {
-            $('#cinemasList').html(`
-                <tr>
-                    <td colspan="6" class="text-center">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Yükleniyor...</span>
-                        </div>
-                    </td>
-                </tr>
-            `);
-        },
-        success: function(response) {
-            if (!response.success || !response.data) {
-                $('#cinemasList').html('<tr><td colspan="6" class="text-center">Veri yüklenirken bir hata oluştu</td></tr>');
-                return;
-            }
-            
-            const cinemas = response.data;
-            
-            if (cinemas.length === 0) {
-                $('#cinemasList').html('<tr><td colspan="6" class="text-center">Sinema bulunamadı</td></tr>');
-                return;
-            }
-            
-            let html = '';
-            
-            cinemas.forEach(cinema => {
-                html += `
-                    <tr class="animate__animated animate__fadeIn">
-                        <td>${cinema.id}</td>
-                        <td>
-                            <div class="d-flex align-items-center">
-                                ${cinema.image ? 
-                                    `<img src="${cinema.image}" class="me-2 rounded-circle hover-zoom" width="40" height="40" alt="${cinema.name}">` : 
-                                    `<div class="bg-light rounded-circle me-2 d-flex align-items-center justify-content-center" style="width:40px;height:40px;">
-                                        <i class="fas fa-building text-secondary"></i>
-                                    </div>`
-                                }
-                                <span>${cinema.name}</span>
-                            </div>
-                        </td>
-                        <td>${cinema.city ? cinema.city.name : '-'}</td>
-                        <td>${cinema.address || '-'}</td>
-                        <td>${cinema.phone || '-'}</td>
-                        <td>${cinema.total_capacity || '0'}</td>
-                        <td>
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-sm btn-primary" onclick="editCinema(${cinema.id})">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete(${cinema.id}, '${cinema.name.replace(/'/g, "\\'")}')">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            });
-            
-            $('#cinemasList').html(html);
-        },
-        error: function(xhr) {
-            if (xhr.status === 401) {
-                localStorage.removeItem('token');
-                window.location.href = '/login';
-                return;
-            }
-            
-            $('#cinemasList').html('<tr><td colspan="6" class="text-center">Veri yüklenirken bir hata oluştu</td></tr>');
+            handleAjaxError(xhr);
         }
     });
 }
@@ -171,14 +128,12 @@ function saveCinema() {
         phone: $('#phone').val(),
         description: $('#description').val()
     };
-    
+
     $.ajax({
         url: '/api/cinemas/cinema-add',
         type: 'POST',
         data: formData,
-        headers: {
-            'Authorization': 'Bearer ' + token
-        },
+        headers: { 'Authorization': 'Bearer ' + token },
         success: function(response) {
             if (response.success) {
                 $('#addCinemaModal').modal('hide');
@@ -190,7 +145,7 @@ function saveCinema() {
                     timer: 1500,
                     showConfirmButton: false
                 });
-                fetchCinemas();
+                $('#cinemasTable').DataTable().ajax.reload();
             } else {
                 Swal.fire({
                     icon: 'error',
@@ -200,45 +155,20 @@ function saveCinema() {
             }
         },
         error: function(xhr) {
-            if (xhr.status === 401) {
-                localStorage.removeItem('token');
-                window.location.href = '/login';
-                return;
-            }
-            
-            const errors = xhr.responseJSON?.errors;
-            if (errors) {
-                Object.keys(errors).forEach(key => {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Hata!',
-                        text: errors[key][0]
-                    });
-                });
-            } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Hata!',
-                    text: 'Sinema eklenirken bir hata oluştu'
-                });
-            }
+            handleAjaxError(xhr);
         }
     });
 }
 
 function editCinema(id) {
     const token = localStorage.getItem('token');
-    
     $.ajax({
         url: `/api/cinemas/cinema-detail/${id}`,
         type: 'GET',
-        headers: {
-            'Authorization': 'Bearer ' + token
-        },
+        headers: { 'Authorization': 'Bearer ' + token },
         success: function(response) {
             if (response.success && response.data) {
                 const cinema = response.data;
-                
                 $('#editCinemaId').val(cinema.id);
                 $('#edit_name').val(cinema.name);
                 $('#edit_city').val(cinema.city_id);
@@ -248,31 +178,25 @@ function editCinema(id) {
                 $('#edit_total_capacity').val(cinema.total_capacity);
                 $('#edit_phone').val(cinema.phone);
                 $('#edit_description').val(cinema.description);
-                
                 $('#editCinemaModal').modal('show');
             } else {
                 Swal.fire({
                     icon: 'error',
                     title: 'Hata!',
-                    text: 'Sinema bilgileri alınırken bir hata oluştu'
+                    text: 'Sinema bilgileri alınamadı'
                 });
             }
         },
         error: function(xhr) {
-            if (xhr.status === 401) {
-                localStorage.removeItem('token');
-                window.location.href = '/login';
-                return;
-            }
-            
-            Swal.fire({
-                icon: 'error',
-                title: 'Hata!',
-                text: 'Sinema bilgileri alınırken bir hata oluştu'
-            });
+            handleAjaxError(xhr);
         }
     });
 }
+
+$(document).on('click', '.edit-cinema', function() {
+    const cinemaId = $(this).data('id');
+    editCinema(cinemaId);
+});
 
 function updateCinema() {
     const token = localStorage.getItem('token');
@@ -287,14 +211,12 @@ function updateCinema() {
         phone: $('#edit_phone').val(),
         description: $('#edit_description').val()
     };
-    
+
     $.ajax({
         url: `/api/cinemas/cinema-update/${id}`,
         type: 'POST',
         data: formData,
-        headers: {
-            'Authorization': 'Bearer ' + token
-        },
+        headers: { 'Authorization': 'Bearer ' + token },
         success: function(response) {
             if (response.success) {
                 $('#editCinemaModal').modal('hide');
@@ -305,7 +227,7 @@ function updateCinema() {
                     timer: 1500,
                     showConfirmButton: false
                 });
-                fetchCinemas();
+                $('#cinemasTable').DataTable().ajax.reload();
             } else {
                 Swal.fire({
                     icon: 'error',
@@ -315,48 +237,26 @@ function updateCinema() {
             }
         },
         error: function(xhr) {
-            if (xhr.status === 401) {
-                localStorage.removeItem('token');
-                window.location.href = '/login';
-                return;
-            }
-            
-            const errors = xhr.responseJSON?.errors;
-            if (errors) {
-                Object.keys(errors).forEach(key => {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Hata!',
-                        text: errors[key][0]
-                    });
-                });
-            } else {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Hata!',
-                    text: 'Sinema güncellenirken bir hata oluştu'
-                });
-            }
+            handleAjaxError(xhr);
         }
     });
 }
 
-function confirmDelete(id, name) {
-    $('#deleteCinemaId').val(id);
-    $('#deleteCinemaName').text(name);
+$(document).on('click', '.delete-cinema', function() {
+    const cinemaId = $(this).data('id');
+    const cinemaName = $(this).data('name');
+    $('#deleteCinemaId').val(cinemaId);
+    $('#deleteCinemaName').text(cinemaName);
     $('#deleteCinemaModal').modal('show');
-}
+});
 
 function deleteCinema() {
     const token = localStorage.getItem('token');
     const id = $('#deleteCinemaId').val();
-    
     $.ajax({
         url: `/api/cinemas/cinema-delete/${id}`,
         type: 'POST',
-        headers: {
-            'Authorization': 'Bearer ' + token
-        },
+        headers: { 'Authorization': 'Bearer ' + token },
         success: function(response) {
             if (response.success) {
                 $('#deleteCinemaModal').modal('hide');
@@ -367,7 +267,7 @@ function deleteCinema() {
                     timer: 1500,
                     showConfirmButton: false
                 });
-                fetchCinemas();
+                $('#cinemasTable').DataTable().ajax.reload();
             } else {
                 Swal.fire({
                     icon: 'error',
@@ -377,88 +277,31 @@ function deleteCinema() {
             }
         },
         error: function(xhr) {
-            if (xhr.status === 401) {
-                localStorage.removeItem('token');
-                window.location.href = '/login';
-                return;
-            }
-            
-            Swal.fire({
-                icon: 'error',
-                title: 'Hata!',
-                text: 'Sinema silinirken bir hata oluştu'
-            });
+            handleAjaxError(xhr);
         }
     });
 }
 
-function viewCinemaHalls(cinemaId, cinemaName) {
-    const token = localStorage.getItem('token');
-    
-    $('#cinemaHallsTitle').text(`${cinemaName} - Salonlar`);
-    $('#cinemaHallsModal').modal('show');
-    
-    $.ajax({
-        url: `/api/cinema-halls/by-cinema/${cinemaId}`,
-        type: 'GET',
-        headers: {
-            'Authorization': 'Bearer ' + token
-        },
-        beforeSend: function() {
-            $('#hallsList').html(`
-                <tr>
-                    <td colspan="5" class="text-center">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Yükleniyor...</span>
-                        </div>
-                    </td>
-                </tr>
-            `);
-        },
-        success: function(response) {
-            if (!response.success || !response.data) {
-                $('#hallsList').html('<tr><td colspan="5" class="text-center">Veri yüklenirken bir hata oluştu</td></tr>');
-                return;
-            }
-            
-            const halls = response.data;
-            
-            if (halls.length === 0) {
-                $('#hallsList').html('<tr><td colspan="5" class="text-center">Bu sinemaya ait salon bulunamadı</td></tr>');
-                return;
-            }
-            
-            let html = '';
-            halls.forEach(hall => {
-                html += `
-                    <tr class="animate__animated animate__fadeIn">
-                        <td>${hall.id}</td>
-                        <td>${hall.name}</td>
-                        <td>${hall.capacity}</td>
-                        <td>
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-sm btn-primary" onclick="editHall(${hall.id})">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button type="button" class="btn btn-sm btn-danger" onclick="confirmDeleteHall(${hall.id}, '${hall.name}')">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
+function handleAjaxError(xhr) {
+    if (xhr.status === 401) {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+        return;
+    }
+    const errors = xhr.responseJSON?.errors;
+    if (errors) {
+        Object.keys(errors).forEach(key => {
+            Swal.fire({
+                icon: 'error',
+                title: 'Hata!',
+                text: errors[key][0]
             });
-            
-            $('#hallsList').html(html);
-        },
-        error: function(xhr) {
-            if (xhr.status === 401) {
-                localStorage.removeItem('token');
-                window.location.href = '/login';
-                return;
-            }
-            
-            $('#hallsList').html('<tr><td colspan="5" class="text-center">Veri yüklenirken bir hata oluştu</td></tr>');
-        }
-    });
-} 
+        });
+    } else {
+        Swal.fire({
+            icon: 'error',
+            title: 'Hata!',
+            text: 'Bir hata oluştu: ' + xhr.statusText
+        });
+    }
+}

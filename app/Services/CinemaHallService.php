@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\CinemaHall;
 use App\Repositories\CinemaHallRepository;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Builder;
 
 class CinemaHallService
 {
@@ -55,7 +56,19 @@ class CinemaHallService
      */
     public function createHall(array $data): CinemaHall
     {
-        return $this->cinemaHallRepository->create($data);
+        // Salonu oluştur
+        $hall = $this->cinemaHallRepository->create($data);
+        
+        // Salon için koltukları otomatik olarak oluştur
+        $seatService = app(SeatService::class);
+        $seatData = [
+            'cinema_hall_id' => $hall->id,
+            'status' => 'active'
+        ];
+        
+        $seatService->createSeat($seatData);
+        
+        return $hall;
     }
 
     /**
@@ -79,5 +92,15 @@ class CinemaHallService
     public function deleteHall(int $id): bool
     {
         return $this->cinemaHallRepository->delete($id);
+    }
+
+    /**
+     * DataTables için salon sorgusu oluştur
+     *
+     * @return Builder
+     */
+    public function getHallsQuery(): Builder
+    {
+        return CinemaHall::with('cinema');
     }
 } 

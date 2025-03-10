@@ -10,6 +10,7 @@ use App\Services\TicketService;
 use App\Services\ResponseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Yajra\DataTables\Facades\DataTables;
 
 class PaymentController extends Controller
 {
@@ -181,5 +182,138 @@ class PaymentController extends Controller
         }
         
         return $this->responseService->success(null, 'Ödeme başarıyla silindi.');
+    }
+
+    /**
+     * DataTables için ödeme verilerini getir
+     *
+     * @param Request $request
+     * @return mixed
+     */
+    public function datatable(Request $request)
+    {
+        $query = $this->paymentService->getPaymentsQuery();
+
+        if ($request->has('user_id') && $request->user_id) {
+            $query->where('user_id', $request->user_id);
+        }
+        
+        if ($request->has('date') && $request->date) {
+            $query->whereDate('created_at', $request->date);
+        }
+        
+        if ($request->has('status') && $request->status) {
+            $query->where('status', $request->status);
+        }
+        
+        if ($request->has('payment_method') && $request->payment_method) {
+            $query->where('payment_method', $request->payment_method);
+        }
+
+        return DataTables::of($query)
+            ->addColumn('ticket_code', function ($payment) {
+                if ($payment->ticket) {
+                    return '<span class="badge bg-dark">
+                        <i class="fas fa-barcode me-1"></i>' . $payment->ticket->ticket_code . '
+                    </span>';
+                }
+                return '<span class="text-muted">-</span>';
+            })
+            ->addColumn('customer', function ($payment) {
+                if ($payment->user) {
+                    return '<div class="d-flex align-items-center">
+                        <div class="bg-light rounded-circle me-2 d-flex align-items-center justify-content-center" style="width:30px;height:30px;">
+                            <i class="fas fa-user text-primary"></i>
+                        </div>
+                        <span>' . $payment->user->name . '</span>
+                    </div>';
+                }
+                return '<span class="text-muted">-</span>';
+            })
+            ->addColumn('amount', function ($payment) {
+                return '<span class="badge bg-success">
+                    <i class="fas fa-lira-sign me-1"></i>' . number_format($payment->amount, 2) . '
+                </span>';
+            })
+            ->addColumn('payment_method', function ($payment) {
+                $methodClass = 'bg-secondary';
+                $methodIcon = 'fa-money-bill';
+                $methodText = 'Bilinmiyor';
+                
+                if ($payment->payment_method == 'credit_card') {
+                    $methodClass = 'bg-info';
+                    $methodIcon = 'fa-credit-card';
+                    $methodText = 'Kredi Kartı';
+                } else if ($payment->payment_method == 'cash') {
+                    $methodClass = 'bg-success';
+                    $methodIcon = 'fa-money-bill';
+                    $methodText = 'Nakit';
+                } else if ($payment->payment_method == 'bank_transfer') {
+                    $methodClass = 'bg-primary';
+                    $methodIcon = 'fa-university';
+                    $methodText = 'Banka Transferi';
+                }
+                
+                return '<span class="badge ' . $methodClass . '">
+                    <i class="fas ' . $methodIcon . ' me-1"></i>' . $methodText . '
+                </span>';
+            })
+            ->addColumn('payment_date', function ($payment) {
+                $date = new \DateTime($payment->created_at);
+                return '<span class="badge bg-info">
+                    <i class="fas fa-calendar-alt me-1"></i>' . $date->format('d.m.Y H:i') . '
+                </span>';
+            })
+            ->addColumn('status', function ($payment) {
+                $statusClass = 'bg-secondary';
+                $statusIcon = 'fa-question-circle';
+                $statusText = 'Bilinmiyor';
+                
+                if ($payment->status == 'completed') {
+                    $statusClass = 'bg-success';
+                    $statusIcon = 'fa-check-circle';
+                    $statusText = 'Tamamlandı';
+                } else if ($payment->status == 'pending') {
+                    $statusClass = 'bg-warning';
+                    $statusIcon = 'fa-clock';
+                    $statusText = 'Beklemede';
+                } else if ($payment->status == 'cancelled') {
+                    $statusClass = 'bg-danger';
+                    $statusIcon = 'fa-times-circle';
+                    $statusText = 'İptal Edildi';
+                }
+                
+                return '<span class="badge ' . $statusClass . '">
+                    <i class="fas ' . $statusIcon . ' me-1"></i>' . $statusText . '
+                </span>';
+            })
+            ->addColumn('actions', function ($payment) {
+                return '
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-info view-payment" data-id="' . $payment->id . '">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-primary edit-payment" data-id="' . $payment->id . '">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-danger delete-payment" data-id="' . $payment->id . '">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                ';
+            })
+            ->rawColumns(['ticket_code', 'customer', 'amount', 'payment_method', 'payment_date', 'status', 'actions'])
+            ->make(true);
+    }
+    
+    /**
+     * Ödeme istatistiklerini getir
+     *
+     * @return JsonResponse
+     */
+    public function getStats(): JsonResponse
+    {
+        $stats = $this->paymentService->getPaymentStats();
+        return $this->responseService->success($stats, 'Ödeme istatistikleri başarıyla alındı.');
     }
 } 

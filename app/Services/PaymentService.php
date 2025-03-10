@@ -7,6 +7,8 @@ use App\Models\Ticket;
 use App\Repositories\PaymentRepository;
 use App\Repositories\TicketRepository;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 
 class PaymentService
 {
@@ -154,5 +156,42 @@ class PaymentService
         $this->ticketRepository->update($ticketId, [
             'status' => $status
         ]);
+    }
+
+    /**
+     * Ödemeler için sorgu oluştur (DataTables için)
+     *
+     * @return Builder
+     */
+    public function getPaymentsQuery(): Builder
+    {
+        return Payment::with(['user', 'ticket'])
+            ->select('payments.*');
+    }
+    
+    /**
+     * Ödeme istatistiklerini hesapla
+     *
+     * @return array
+     */
+    public function getPaymentStats(): array
+    {
+        $stats = [
+            'total' => Payment::count(),
+            'completed' => Payment::where('status', 'completed')->count(),
+            'pending' => Payment::where('status', 'pending')->count(),
+            'cancelled' => Payment::where('status', 'cancelled')->count(),
+            'total_amount' => Payment::where('status', 'completed')->sum('amount'),
+            'today_amount' => Payment::where('status', 'completed')
+                ->whereDate('created_at', now()->toDateString())
+                ->sum('amount'),
+            'payment_methods' => [
+                'credit_card' => Payment::where('payment_method', 'credit_card')->count(),
+                'cash' => Payment::where('payment_method', 'cash')->count(),
+                'bank_transfer' => Payment::where('payment_method', 'bank_transfer')->count(),
+            ]
+        ];
+        
+        return $stats;
     }
 } 

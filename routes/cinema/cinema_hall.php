@@ -8,6 +8,7 @@ Route::prefix('cinema-halls')->group(function () {
         Route::get('/hall-list', [CinemaHallController::class, 'index'])->name('hall-list');
         Route::get('/hall-detail/{id}', [CinemaHallController::class, 'show'])->name('hall-detail');
         Route::get('/hall-by-cinema/{cinema_id}', [CinemaHallController::class, 'byCinema'])->name('hall-by-cinema');
+        Route::get('/datatable', [CinemaHallController::class, 'getHalls'])->name('hall-datatable');
     });
 
     Route::middleware(['auth', 'check.role:admin,super_admin'])->group(function () {

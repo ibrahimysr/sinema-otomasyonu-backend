@@ -10,6 +10,7 @@ Route::prefix('tickets')->group(function () {
         Route::get('/ticket-by-code/{code}', [TicketController::class, 'byCode'])->name('ticket-by-code');
         Route::get('/ticket-by-user/{user_id}', [TicketController::class, 'byUser'])->name('ticket-by-user');
         Route::get('/ticket-by-showtime/{showtime_id}', [TicketController::class, 'byShowtime'])->name('ticket-by-showtime');
+        Route::get('/datatable', [TicketController::class, 'getTickets'])->name('ticket-datatable');
         
         // Bilet oluşturma (kullanıcılar da bilet alabilir)
         Route::post('/ticket-add', [TicketController::class, 'store'])->name('ticket-add');

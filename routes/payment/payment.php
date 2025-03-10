@@ -16,6 +16,8 @@ Route::prefix('payments')->group(function () {
     });
 
     Route::middleware(['auth', 'check.role:admin,super_admin'])->group(function () {
+        Route::get('/datatable', [PaymentController::class, 'datatable'])->name('payment-datatable');
+        Route::get('/stats', [PaymentController::class, 'getStats'])->name('payment-stats');
         Route::post('/payment-update/{id}', [PaymentController::class, 'update'])->name('payment-update');
         Route::post('/payment-delete/{id}', [PaymentController::class, 'destroy'])->name('payment-delete');
     });

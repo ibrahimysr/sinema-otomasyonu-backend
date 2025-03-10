@@ -31,7 +31,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="card-subtitle mb-2 text-muted">Tamamlanan Biletler</h6>
+                            <h6 class="card-subtitle mb-2 text-muted">Onaylanan Biletler</h6>
                             <h2 class="card-title mb-0" id="completedTickets">0</h2>
                         </div>
                         <div class="stats-icon bg-success">
@@ -46,7 +46,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="card-subtitle mb-2 text-muted">Bekleyen Biletler</h6>
+                            <h6 class="card-subtitle mb-2 text-muted">Rezerve Edilen Biletler</h6>
                             <h2 class="card-title mb-0" id="pendingTickets">0</h2>
                         </div>
                         <div class="stats-icon bg-warning">
@@ -139,7 +139,7 @@
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table class="table table-hover" id="ticketsTable">
                     <thead>
                         <tr>
                             <th><i class="fas fa-hashtag me-2"></i>ID</th>
@@ -228,8 +228,8 @@
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fas fa-check-circle"></i></span>
                                 <select class="form-select" id="status" name="status" required>
-                                    <option value="pending">Bekliyor</option>
-                                    <option value="completed">Tamamlandı</option>
+                                    <option value="reserved">Rezerve Edildi</option>
+                                    <option value="confirmed">Onaylandı</option>
                                     <option value="cancelled">İptal Edildi</option>
                                 </select>
                             </div>
@@ -305,8 +305,8 @@
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fas fa-check-circle"></i></span>
                                 <select class="form-select" id="edit_status" name="status" required>
-                                    <option value="pending">Bekliyor</option>
-                                    <option value="completed">Tamamlandı</option>
+                                    <option value="reserved">Rezerve Edildi</option>
+                                    <option value="confirmed">Onaylandı</option>
                                     <option value="cancelled">İptal Edildi</option>
                                 </select>
                             </div>

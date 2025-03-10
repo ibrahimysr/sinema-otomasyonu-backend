@@ -10,6 +10,8 @@ use App\Services\MovieService;
 use App\Services\ResponseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Yajra\DataTables\Facades\DataTables;
+use App\Models\Movie; // Movie modelinizi dahil edin
 
 class MovieController extends Controller
 {
@@ -133,6 +135,17 @@ class MovieController extends Controller
     }
 
     /**
+     * Tüm filmleri sayfalama olmadan getir (dropdown için)
+     *
+     * @return JsonResponse
+     */
+    public function getAllMovies(): JsonResponse
+    {
+        $movies = $this->movieService->getAllMovies();
+        return $this->responseService->success($movies, 'Filmler başarıyla listelendi.');
+    }
+
+    /**
      * OMDB API'den film ara ve veritabanına ekle
      *
      * @param ImportMoviesRequest $request
@@ -169,4 +182,54 @@ class MovieController extends Controller
             );
         }
     }
+
+    public function getMovies(Request $request)
+{
+    $query = Movie::query();
+
+    // Arama filtreleri
+    if ($request->has('title') && $request->title) {
+        $query->where('title', 'like', '%' . $request->title . '%');
+    }
+    if ($request->has('genre') && $request->genre) {
+        $query->where('genre', 'like', '%' . $request->genre . '%');
+    }
+    if ($request->has('release_year') && $request->release_year) {
+        $query->whereYear('release_date', $request->release_year);
+    }
+
+    return DataTables::of($query)
+        ->addColumn('poster', function ($movie) {
+            return $movie->poster_url 
+                ? '<img src="' . $movie->poster_url . '" width="50" height="75" alt="' . $movie->title . '" class="img-thumbnail hover-zoom">'
+                : '<div class="bg-light text-center" style="width:50px;height:75px;"><i class="fas fa-film mt-4"></i></div>';
+        })
+        ->addColumn('release_date', function ($movie) {
+            return $movie->release_date ? $movie->release_date->format('d.m.Y') : 'Belirtilmemiş';
+        })
+        ->addColumn('imdb_rating', function ($movie) {
+            return $movie->imdb_rating 
+                ? '<span class="badge bg-warning text-dark">' . $movie->imdb_rating . '</span>' 
+                : '-';
+        })
+        ->addColumn('is_in_theaters', function ($movie) {
+            return $movie->is_in_theaters 
+                ? '<span class="badge bg-gradient-success">Gösterimde</span>' 
+                : '<span class="badge bg-gradient-danger">Gösterimde Değil</span>';
+        })
+        ->addColumn('actions', function ($movie) {
+            return '
+                <div class="btn-group">
+                    <button type="button" class="btn btn-sm btn-info edit-movie" data-id="' . $movie->id . '">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-danger delete-movie" data-id="' . $movie->id . '">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            ';
+        })
+        ->rawColumns(['poster', 'imdb_rating', 'is_in_theaters', 'actions']) // HTML içeriği için
+        ->make(true);
+}
 }

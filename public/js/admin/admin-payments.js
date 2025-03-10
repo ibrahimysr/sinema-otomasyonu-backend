@@ -1,7 +1,7 @@
-
 $(document).ready(function() {
     const API_URL = '/api';
     const PAYMENTS_API = `${API_URL}/payments/payment-list`;
+    const PAYMENTS_DATATABLE_API = `${API_URL}/payments/datatable`;
     const PAYMENT_ADD_API = `${API_URL}/payments/payment-add`;
     const PAYMENT_UPDATE_API = `${API_URL}/payments/payment-update`;
     const PAYMENT_DELETE_API = `${API_URL}/payments/payment-delete`;
@@ -14,7 +14,54 @@ $(document).ready(function() {
         return;
     }
 
-    const paymentsTableBody = $('#paymentsTableBody');
+    const table = $('#paymentsTable').DataTable({
+        processing: true,
+        serverSide: true,
+        responsive: true,
+        searching: false, 
+        ajax: {
+            url: PAYMENTS_DATATABLE_API,
+            type: 'GET',
+            headers: {
+                'Authorization': 'Bearer ' + token
+            },
+            data: function(d) {
+                d.user_id = $('#searchUser').val();
+                d.date = $('#searchDate').val();
+                d.status = $('#searchStatus').val();
+                d.payment_method = $('#searchPaymentMethod').val();
+            },
+            error: function(xhr) {
+                if (xhr.status === 401) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login';
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Hata!',
+                        text: 'Veriler yüklenirken bir hata oluştu: ' + xhr.statusText
+                    });
+                }
+            }
+        },
+        columns: [
+            { data: 'id', name: 'id' },
+            { data: 'ticket_code', name: 'ticket.ticket_code', orderable: false },
+            { data: 'customer', name: 'user.name', orderable: false },
+            { data: 'amount', name: 'amount', orderable: true },
+            { data: 'payment_method', name: 'payment_method', orderable: true },
+            { data: 'payment_date', name: 'created_at', orderable: true },
+            { data: 'status', name: 'status', orderable: true },
+            { data: 'actions', name: 'actions', orderable: false, searchable: false }
+        ],
+        language: {
+            url: '/js/i18n/tr.json' 
+        },
+        drawCallback: function() {
+            $('#paymentsTable tbody tr').addClass('animate__animated animate__fadeIn');
+            updateStats();
+        }
+    });
     
     const addPaymentForm = $('#addPaymentForm');
     const editPaymentForm = $('#editPaymentForm');
@@ -27,155 +74,33 @@ $(document).ready(function() {
     const editTicketSelect = $('#edit_ticket_id');
     const editUserSelect = $('#edit_user_id');
     
-    loadPayments();
-    
     $('#searchForm').on('submit', function(e) {
         e.preventDefault();
-        loadPayments();
+        table.draw();
+    });
+    
+    $('#searchUser, #searchStatus, #searchPaymentMethod').on('change', function() {
+        table.draw();
+    });
+    
+    $('#searchDate').on('change', function() {
+        table.draw();
     });
     
     $('#resetSearch').on('click', function() {
         $('#searchForm')[0].reset();
-        loadPayments();
+        table.draw();
     });
     
     $('#refreshPayments').on('click', function() {
-        loadPayments();
+        table.draw();
     });
     
     $('#printPaymentBtn').on('click', function() {
         printPayment();
     });
     
-    function loadPayments() {
-        paymentsTableBody.html(`
-            <tr>
-                <td colspan="9" class="text-center py-4">
-                    <div class="d-flex justify-content-center align-items-center">
-                        <div class="loading-spinner me-2"></div>
-                        <span>Yükleniyor...</span>
-                    </div>
-                </td>
-            </tr>
-        `);
-        
-        const searchParams = {
-            user_id: $('#searchUser').val(),
-            date: $('#searchDate').val(),
-            status: $('#searchStatus').val()
-        };
-        
-        $.ajax({
-            url: PAYMENTS_API,
-            type: 'GET',
-            data: searchParams,
-            headers: {
-                'Authorization': 'Bearer ' + token
-            },
-            success: function(response) {
-                if (response.success && response.data && response.data.length > 0) {
-                    displayPayments(response.data);
-                    
-                    if (response.stats) {
-                        updateStats(response.stats);
-                    } else {
-                        calculateStats(response.data);
-                    }
-                } else {
-                    paymentsTableBody.html(`
-                        <tr>
-                            <td colspan="9" class="text-center py-4">
-                                <div class="alert alert-info mb-0">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    Ödeme bulunamadı
-                                </div>
-                            </td>
-                        </tr>
-                    `);
-                    
-                    updateStats({
-                        total: 0,
-                        completed: 0,
-                        pending: 0,
-                        cancelled: 0
-                    });
-                }
-            },
-            error: function(xhr) {
-                if (xhr.status === 401) {
-                    localStorage.removeItem('token');
-                    window.location.href = '/login';
-                    return;
-                }
-                
-                paymentsTableBody.html(`
-                    <tr>
-                        <td colspan="9" class="text-center py-4">
-                            <div class="alert alert-danger mb-0">
-                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                Ödemeler yüklenirken bir hata oluştu
-                            </div>
-                        </td>
-                    </tr>
-                `);
-            }
-        });
-    }
-
-    function displayPayments(payments) {
-        paymentsTableBody.empty();
-        
-        payments.forEach(payment => {
-            const statusClass = getStatusClass(payment.status);
-            const statusText = getStatusText(payment.status);
-            const paymentMethodText = getPaymentMethodText(payment.payment_method);
-            
-            const row = $(`
-                <tr class="animate__animated animate__fadeIn">
-                    <td>${payment.id}</td>
-                    <td>${payment.user?.name || 'Bilinmiyor'}</td>
-                    <td>${payment.ticket?.ticket_code || 'Bilinmiyor'}</td>
-                    <td>${formatCurrency(payment.amount)}</td>
-                    <td>${paymentMethodText}</td>
-                    <td>${formatDateTime(payment.created_at)}</td>
-                    <td><span class="badge bg-${statusClass}">${statusText}</span></td>
-                    <td>
-                        <div class="btn-group">
-                            <button class="btn btn-sm btn-info view-payment" data-id="${payment.id}" title="Görüntüle">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="btn btn-sm btn-primary edit-payment" data-id="${payment.id}" title="Düzenle">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-sm btn-danger delete-payment" data-id="${payment.id}" title="Sil">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `);
-            
-            paymentsTableBody.append(row);
-        });
-        
-        $('.view-payment').on('click', function() {
-            const paymentId = $(this).data('id');
-            viewPayment(paymentId);
-        });
-        
-        $('.edit-payment').on('click', function() {
-            const paymentId = $(this).data('id');
-            editPayment(paymentId);
-        });
-        
-        $('.delete-payment').on('click', function() {
-            const paymentId = $(this).data('id');
-            $('#delete_payment_id').val(paymentId);
-            $('#deletePaymentModal').modal('show');
-        });
-    }
-
-    function fetchTickets() {
+    function fetchTickets(selectedTicketId = null) {
         $.ajax({
             url: TICKETS_API,
             type: 'GET',
@@ -184,7 +109,7 @@ $(document).ready(function() {
             },
             success: function(response) {
                 if (response.success && response.data && response.data.length > 0) {
-                    populateTicketSelects(response.data);
+                    populateTicketSelects(response.data, selectedTicketId);
                 }
             },
             error: function(xhr) {
@@ -199,7 +124,7 @@ $(document).ready(function() {
         });
     }
 
-    function fetchUsers() {
+    function fetchUsers(selectedUserId = null) {
         $.ajax({
             url: USERS_API,
             type: 'GET',
@@ -208,7 +133,7 @@ $(document).ready(function() {
             },
             success: function(response) {
                 if (response.success && response.data && response.data.length > 0) {
-                    populateUserSelects(response.data);
+                    populateUserSelects(response.data, selectedUserId);
                 }
             },
             error: function(xhr) {
@@ -223,28 +148,36 @@ $(document).ready(function() {
         });
     }
 
-    function populateTicketSelects(tickets) {
+    function populateTicketSelects(tickets, selectedTicketId = null) {
         ticketSelect.html('<option value="">Bilet Seçin</option>');
         editTicketSelect.html('<option value="">Bilet Seçin</option>');
         
         tickets.forEach(ticket => {
-            const option = `<option value="${ticket.id}">${ticket.ticket_code} - ${ticket.showtime?.movie?.title || 'Bilinmiyor'}</option>`;
+            const option = `<option value="${ticket.id}" ${selectedTicketId && selectedTicketId == ticket.id ? 'selected' : ''}>${ticket.ticket_code} - ${ticket.showtime?.movie?.title || 'Bilinmiyor'}</option>`;
             
             ticketSelect.append(option);
             editTicketSelect.append(option);
         });
+        
+        if (selectedTicketId) {
+            editTicketSelect.val(selectedTicketId);
+        }
     }
 
-    function populateUserSelects(users) {
+    function populateUserSelects(users, selectedUserId = null) {
         userSelect.html('<option value="">Müşteri Seçin</option>');
         editUserSelect.html('<option value="">Müşteri Seçin</option>');
         
         users.forEach(user => {
-            const option = `<option value="${user.id}">${user.name} (${user.email})</option>`;
+            const option = `<option value="${user.id}" ${selectedUserId && selectedUserId == user.id ? 'selected' : ''}>${user.name} (${user.email})</option>`;
             
             userSelect.append(option);
             editUserSelect.append(option);
         });
+        
+        if (selectedUserId) {
+            editUserSelect.val(selectedUserId);
+        }
         
         const searchUserSelect = $('#searchUser');
         searchUserSelect.html('<option value="">Tümü</option>');
@@ -255,14 +188,85 @@ $(document).ready(function() {
 
     savePaymentBtn.on('click', function() {
         const formData = new FormData(addPaymentForm[0]);
+        
+        const ticketId = formData.get('ticket_id');
+        if (!ticketId) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Hata!',
+                text: 'Lütfen bir bilet seçin.'
+            });
+            return;
+        }
+        
+        const paymentMethod = formData.get('payment_method');
+        if (!paymentMethod) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Hata!',
+                text: 'Lütfen bir ödeme yöntemi seçin.'
+            });
+            return;
+        }
+        
+        const validPaymentMethods = ['credit_card', 'debit_card', 'cash', 'transfer'];
+        if (!validPaymentMethods.includes(paymentMethod)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Hata!',
+                text: 'Ödeme yöntemi geçerli değil. Geçerli değerler: credit_card, debit_card, cash, transfer.'
+            });
+            return;
+        }
+        
+        const status = formData.get('status');
+        if (!status) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Hata!',
+                text: 'Lütfen bir durum seçin.'
+            });
+            return;
+        }
+        
+        const validStatuses = ['pending', 'completed', 'failed'];
+        
+        let finalStatus = status;
+        if (status === 'cancelled') {
+            finalStatus = 'failed';
+        }
+        
+        if (!validStatuses.includes(finalStatus)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Hata!',
+                text: 'Durum geçerli değil. Geçerli değerler: pending, completed, failed.'
+            });
+            return;
+        }
+        
         const paymentData = {
-            ticket_id: formData.get('ticket_id'),
-            user_id: formData.get('user_id'),
-            amount: formData.get('amount'),
-            payment_method: formData.get('payment_method'),
-            status: formData.get('status'),
-            notes: formData.get('notes')
+            ticket_id: parseInt(ticketId),
+            payment_method: paymentMethod,
+            status: finalStatus
         };
+        
+        const userId = formData.get('user_id');
+        if (userId) {
+            paymentData.user_id = parseInt(userId);
+        }
+        
+        const amount = formData.get('amount');
+        if (amount && amount.trim() !== '') {
+            paymentData.amount = parseFloat(amount);
+        }
+        
+        const notes = formData.get('notes');
+        if (notes && notes.trim() !== '') {
+            paymentData.notes = notes;
+        }
+        
+        console.log('Gönderilen veri:', paymentData);
         
         $.ajax({
             url: PAYMENT_ADD_API,
@@ -285,7 +289,7 @@ $(document).ready(function() {
                         showConfirmButton: false
                     });
                     
-                    loadPayments();
+                    table.draw();
                 } else {
                     Swal.fire({
                         icon: 'error',
@@ -332,18 +336,26 @@ $(document).ready(function() {
                 if (response.success && response.data) {
                     const payment = response.data;
                     
-                    $('#edit_payment_id').val(payment.id);
-                    $('#edit_ticket_id').val(payment.ticket_id);
-                    $('#edit_user_id').val(payment.user_id);
-                    $('#edit_amount').val(payment.amount);
-                    $('#edit_payment_method').val(payment.payment_method);
-                    $('#edit_status').val(payment.status);
-                    $('#edit_notes').val(payment.notes);
-                    
-                    fetchTickets();
-                    fetchUsers();
-                    
                     $('#editPaymentModal').modal('show');
+                    
+                    const paymentData = {
+                        id: payment.id,
+                        ticket_id: payment.ticket_id,
+                        user_id: payment.user_id,
+                        amount: payment.amount,
+                        payment_method: payment.payment_method,
+                        status: payment.status,
+                        notes: payment.notes
+                    };
+                    
+                    $('#edit_payment_id').val(paymentData.id);
+                    $('#edit_amount').val(paymentData.amount);
+                    $('#edit_payment_method').val(paymentData.payment_method);
+                    $('#edit_status').val(paymentData.status);
+                    $('#edit_notes').val(paymentData.notes);
+                    
+                    fetchTickets(paymentData.ticket_id);
+                    fetchUsers(paymentData.user_id);
                 } else {
                     Swal.fire({
                         icon: 'error',
@@ -416,14 +428,85 @@ $(document).ready(function() {
     updatePaymentBtn.on('click', function() {
         const paymentId = $('#edit_payment_id').val();
         const formData = new FormData(editPaymentForm[0]);
+        
+        const ticketId = formData.get('ticket_id');
+        if (!ticketId) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Hata!',
+                text: 'Lütfen bir bilet seçin.'
+            });
+            return;
+        }
+        
+        const paymentMethod = formData.get('payment_method');
+        if (!paymentMethod) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Hata!',
+                text: 'Lütfen bir ödeme yöntemi seçin.'
+            });
+            return;
+        }
+        
+        const validPaymentMethods = ['credit_card', 'debit_card', 'cash', 'transfer'];
+        if (!validPaymentMethods.includes(paymentMethod)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Hata!',
+                text: 'Ödeme yöntemi geçerli değil. Geçerli değerler: credit_card, debit_card, cash, transfer.'
+            });
+            return;
+        }
+        
+        const status = formData.get('status');
+        if (!status) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Hata!',
+                text: 'Lütfen bir durum seçin.'
+            });
+            return;
+        }
+        
+        const validStatuses = ['pending', 'completed', 'failed'];
+        
+        let finalStatus = status;
+        if (status === 'cancelled') {
+            finalStatus = 'failed';
+        }
+        
+        if (!validStatuses.includes(finalStatus)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Hata!',
+                text: 'Durum geçerli değil. Geçerli değerler: pending, completed, failed.'
+            });
+            return;
+        }
+        
         const paymentData = {
-            ticket_id: formData.get('ticket_id'),
-            user_id: formData.get('user_id'),
-            amount: formData.get('amount'),
-            payment_method: formData.get('payment_method'),
-            status: formData.get('status'),
-            notes: formData.get('notes')
+            ticket_id: parseInt(ticketId),
+            payment_method: paymentMethod,
+            status: finalStatus
         };
+        
+        const userId = formData.get('user_id');
+        if (userId) {
+            paymentData.user_id = parseInt(userId);
+        }
+        
+        const amount = formData.get('amount');
+        if (amount && amount.trim() !== '') {
+            paymentData.amount = parseFloat(amount);
+        }
+        
+        const notes = formData.get('notes');
+        if (notes && notes.trim() !== '') {
+            paymentData.notes = notes;
+        }
+        
+        console.log('Güncellenen veri:', paymentData);
         
         $.ajax({
             url: `${PAYMENT_UPDATE_API}/${paymentId}`,
@@ -445,7 +528,7 @@ $(document).ready(function() {
                         showConfirmButton: false
                     });
                     
-                    loadPayments();
+                    table.draw();
                 } else {
                     Swal.fire({
                         icon: 'error',
@@ -502,7 +585,7 @@ $(document).ready(function() {
                         showConfirmButton: false
                     });
                     
-                    loadPayments();
+                    table.draw();
                 } else {
                     Swal.fire({
                         icon: 'error',
@@ -645,38 +728,29 @@ $(document).ready(function() {
         }
     }
     
-    function calculateStats(payments) {
-        const stats = {
-            total: payments.length,
-            completed: 0,
-            pending: 0,
-            cancelled: 0
-        };
-        
-        payments.forEach(payment => {
-            switch (payment.status) {
-                case 'completed':
-                    stats.completed++;
-                    break;
-                case 'pending':
-                    stats.pending++;
-                    break;
-                case 'cancelled':
-                    stats.cancelled++;
-                    break;
+    function updateStats() {
+        $.ajax({
+            url: `${API_URL}/payments/stats`,
+            type: 'GET',
+            headers: {
+                'Authorization': 'Bearer ' + token
+            },
+            success: function(response) {
+                if (response.success && response.data) {
+                    const stats = response.data;
+                    $('#totalPayments').text(stats.total || 0);
+                    $('#successfulPayments').text(stats.completed || 0);
+                    $('#pendingPayments').text(stats.pending || 0);
+                    $('#cancelledPayments').text(stats.cancelled || 0);
+                }
+            },
+            error: function(xhr) {
+                if (xhr.status === 401) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login';
+                }
             }
         });
-        
-        updateStats(stats);
-    }
-    
-    function updateStats(stats) {
-        if (stats) {
-            $('#totalPayments').text(stats.total || 0);
-            $('#successfulPayments').text(stats.completed || 0);
-            $('#pendingPayments').text(stats.pending || 0);
-            $('#cancelledPayments').text(stats.cancelled || 0);
-        }
     }
 
     function showAlert(type, message) {
@@ -688,6 +762,23 @@ $(document).ready(function() {
             showConfirmButton: type !== 'success'
         });
     }
+    
+    // DataTables için event listener'lar
+    $('#paymentsTable').on('click', '.view-payment', function() {
+        const paymentId = $(this).data('id');
+        viewPayment(paymentId);
+    });
+    
+    $('#paymentsTable').on('click', '.edit-payment', function() {
+        const paymentId = $(this).data('id');
+        editPayment(paymentId);
+    });
+    
+    $('#paymentsTable').on('click', '.delete-payment', function() {
+        const paymentId = $(this).data('id');
+        $('#delete_payment_id').val(paymentId);
+        $('#deletePaymentModal').modal('show');
+    });
     
     fetchTickets();
     fetchUsers();

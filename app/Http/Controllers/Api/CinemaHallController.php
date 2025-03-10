@@ -9,6 +9,7 @@ use App\Services\CinemaHallService;
 use App\Services\ResponseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Yajra\DataTables\Facades\DataTables;
 
 class CinemaHallController extends Controller
 {
@@ -117,5 +118,75 @@ class CinemaHallController extends Controller
         }
         
         return $this->responseService->success(null, 'Salon başarıyla silindi.');
+    }
+
+    /**
+     * DataTables için salon verilerini getir
+     *
+     * @param Request $request
+     * @return mixed
+     */
+    public function getHalls(Request $request)
+    {
+        $query = $this->cinemaHallService->getHallsQuery();
+
+        if ($request->has('name') && $request->name) {
+            $query->where('name', 'like', '%' . $request->name . '%');
+        }
+        if ($request->has('cinema_id') && $request->cinema_id) {
+            $query->where('cinema_id', $request->cinema_id);
+        }
+        if ($request->has('min_capacity') && $request->min_capacity) {
+            $query->where('capacity', '>=', $request->min_capacity);
+        }
+
+        return DataTables::of($query)
+            ->addColumn('cinema_name', function ($hall) {
+                if ($hall->cinema) {
+                    return '<div class="d-flex align-items-center">
+                        <div class="bg-light rounded-circle me-2 d-flex align-items-center justify-content-center" style="width:30px;height:30px;">
+                            <i class="fas fa-building text-primary"></i>
+                        </div>
+                        <span>' . $hall->cinema->name . '</span>
+                    </div>';
+                }
+                return '<span class="text-muted">-</span>';
+            })
+            ->addColumn('type', function ($hall) {
+                $badgeClass = 'bg-secondary';
+                
+                if ($hall->type == '2D') {
+                    $badgeClass = 'bg-info';
+                } else if ($hall->type == '3D') {
+                    $badgeClass = 'bg-primary';
+                } else if ($hall->type == 'IMAX') {
+                    $badgeClass = 'bg-success';
+                } else if ($hall->type == '4DX') {
+                    $badgeClass = 'bg-warning';
+                }
+                
+                return '<span class="badge ' . $badgeClass . '">
+                    <i class="fas fa-film me-1"></i>' . ($hall->type ?: 'Standart') . '
+                </span>';
+            })
+            ->addColumn('capacity', function ($hall) {
+                return '<span class="badge bg-info">
+                    <i class="fas fa-users me-1"></i>' . $hall->capacity . ' Kişi
+                </span>';
+            })
+            ->addColumn('actions', function ($hall) {
+                return '
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-info edit-hall" data-id="' . $hall->id . '">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-danger delete-hall" data-id="' . $hall->id . '" data-name="' . htmlspecialchars($hall->name) . '">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                ';
+            })
+            ->rawColumns(['actions', 'cinema_name', 'type', 'capacity'])
+            ->make(true);
     }
 } 
