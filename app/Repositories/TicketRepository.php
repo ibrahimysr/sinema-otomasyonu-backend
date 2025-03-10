@@ -21,7 +21,12 @@ class TicketRepository
      */
     public function getAll(): Collection
     {
-        return $this->model->with(['user', 'showtime'])->get();
+        return $this->model->with([
+            'user', 
+            'showtime.movie', 
+            'showtime.cinemaHall', 
+            'showtime.cinemaHall.cinema'
+        ])->get();
     }
 
     /**
@@ -32,7 +37,12 @@ class TicketRepository
      */
     public function findById(int $id): ?Ticket
     {
-        return $this->model->with(['user', 'showtime'])->find($id);
+        return $this->model->with([
+            'user', 
+            'showtime.movie', 
+            'showtime.cinemaHall', 
+            'showtime.cinemaHall.cinema'
+        ])->find($id);
     }
 
     /**
@@ -44,7 +54,12 @@ class TicketRepository
     public function findByTicketCode(string $ticketCode): ?Ticket
     {
         return $this->model->where('ticket_code', $ticketCode)
-            ->with(['user', 'showtime'])
+            ->with([
+                'user', 
+                'showtime.movie', 
+                'showtime.cinemaHall', 
+                'showtime.cinemaHall.cinema'
+            ])
             ->first();
     }
 
@@ -57,7 +72,11 @@ class TicketRepository
     public function getByUserId(int $userId): Collection
     {
         return $this->model->where('user_id', $userId)
-            ->with(['showtime'])
+            ->with([
+                'showtime.movie', 
+                'showtime.cinemaHall', 
+                'showtime.cinemaHall.cinema'
+            ])
             ->get();
     }
 
@@ -70,7 +89,12 @@ class TicketRepository
     public function getByShowtimeId(int $showtimeId): Collection
     {
         return $this->model->where('showtime_id', $showtimeId)
-            ->with(['user'])
+            ->with([
+                'user',
+                'showtime.movie', 
+                'showtime.cinemaHall', 
+                'showtime.cinemaHall.cinema'
+            ])
             ->get();
     }
 

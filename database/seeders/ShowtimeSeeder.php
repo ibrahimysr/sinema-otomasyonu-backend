@@ -87,7 +87,6 @@ class ShowtimeSeeder extends Seeder
         if (isset($seatData['seats'])) {
             foreach ($seatData['seats'] as $row => $seats) {
                 foreach ($seats as $seat) {
-                    // Rastgele koltuk durumu ata (çoğunlukla available)
                     $status = rand(1, 10) <= 8 ? 'available' : (rand(0, 1) ? 'reserved' : 'sold');
                     $seatStatus[$seat['id']] = $status;
                 }
@@ -119,9 +118,9 @@ class ShowtimeSeeder extends Seeder
      */
     private function generateSeatData(CinemaHall $hall): array
     {
-        // Salonun kapasitesine göre basit bir koltuk düzeni oluştur
-        $capacity = $hall->capacity ?: 50; // Varsayılan kapasite 50
-        $rows = ceil(sqrt($capacity)); // Kare şeklinde bir düzen için
+        
+        $capacity = $hall->capacity ?: 50; 
+        $rows = ceil(sqrt($capacity)); 
         
         $seatData = ['seats' => []];
         $seatCount = 0;

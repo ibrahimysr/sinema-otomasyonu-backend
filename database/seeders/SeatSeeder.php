@@ -24,17 +24,13 @@ class SeatSeeder extends Seeder
             return;
         }
         
-        // Mevcut koltukları temizle
         Seat::truncate();
         
-        // SeatService'i al
         $seatService = app(SeatService::class);
         
-        // Her salon için koltuk verisi oluştur
         foreach ($halls as $hall) {
             $this->command->info("Salon {$hall->id} ({$hall->name}) için koltuklar oluşturuluyor...");
             
-            // Koltuk verisi oluştur
             $seatService->createSeat([
                 'cinema_hall_id' => $hall->id,
                 'status' => 'active',

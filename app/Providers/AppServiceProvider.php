@@ -65,6 +65,12 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Services\RoleService::class, function ($app) {
             return new \App\Services\RoleService();
         });
+
+        $this->app->singleton(\App\Services\UserService::class, function ($app) {
+            return new \App\Services\UserService(
+                $app->make(\App\Repositories\UserRepository::class)
+            );
+        });
     }
 
     

@@ -12,5 +12,6 @@ require __DIR__ . '/movie/movie.php';
 require __DIR__ . '/cinema/showtime.php';
 require __DIR__ . '/ticket/ticket.php';
 require __DIR__ . '/payment/payment.php';
+require __DIR__ . '/user/user.php';
 
 

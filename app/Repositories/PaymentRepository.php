@@ -21,7 +21,14 @@ class PaymentRepository
      */
     public function getAll(): Collection
     {
-        return $this->model->with(['user', 'ticket'])->get();
+        return $this->model->with([
+            'user', 
+            'ticket', 
+            'ticket.showtime', 
+            'ticket.showtime.movie', 
+            'ticket.showtime.cinemaHall', 
+            'ticket.showtime.cinemaHall.cinema'
+        ])->get();
     }
 
     /**
@@ -32,7 +39,14 @@ class PaymentRepository
      */
     public function findById(int $id): ?Payment
     {
-        return $this->model->with(['user', 'ticket'])->find($id);
+        return $this->model->with([
+            'user', 
+            'ticket', 
+            'ticket.showtime', 
+            'ticket.showtime.movie', 
+            'ticket.showtime.cinemaHall', 
+            'ticket.showtime.cinemaHall.cinema'
+        ])->find($id);
     }
 
     /**
@@ -44,7 +58,13 @@ class PaymentRepository
     public function getByUserId(int $userId): Collection
     {
         return $this->model->where('user_id', $userId)
-            ->with(['ticket'])
+            ->with([
+                'ticket', 
+                'ticket.showtime', 
+                'ticket.showtime.movie', 
+                'ticket.showtime.cinemaHall', 
+                'ticket.showtime.cinemaHall.cinema'
+            ])
             ->get();
     }
 
@@ -57,7 +77,13 @@ class PaymentRepository
     public function getByTicketId(int $ticketId): Collection
     {
         return $this->model->where('ticket_id', $ticketId)
-            ->with(['user'])
+            ->with([
+                'user',
+                'ticket.showtime', 
+                'ticket.showtime.movie', 
+                'ticket.showtime.cinemaHall', 
+                'ticket.showtime.cinemaHall.cinema'
+            ])
             ->get();
     }
 
@@ -70,7 +96,14 @@ class PaymentRepository
     public function getByStatus(string $status): Collection
     {
         return $this->model->where('status', $status)
-            ->with(['user', 'ticket'])
+            ->with([
+                'user', 
+                'ticket', 
+                'ticket.showtime', 
+                'ticket.showtime.movie', 
+                'ticket.showtime.cinemaHall', 
+                'ticket.showtime.cinemaHall.cinema'
+            ])
             ->get();
     }
 

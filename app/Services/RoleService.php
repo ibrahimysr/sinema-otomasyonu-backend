@@ -21,6 +21,14 @@ class RoleService
         $targetUser = User::find($targetUserId);
         $newRole = Role::find($newRoleId);
         
+        if (!$targetUser || !$newRole) {
+            return [
+                'success' => false,
+                'message' => 'Kullanıcı veya rol bulunamadı.',
+                'status' => 404
+            ];
+        }
+
         // Yetki kontrolü
         if (!$currentUser->isAdmin()) {
             return [
@@ -47,6 +55,24 @@ class RoleService
                 'status' => 403
             ];
         }
+
+        // Normal kullanıcı sadece kendi rolünü değiştirebilir
+        if (!$currentUser->isAdmin() && $currentUser->id !== $targetUser->id) {
+            return [
+                'success' => false,
+                'message' => 'Başka kullanıcıların rolünü değiştirme yetkiniz bulunmamaktadır.',
+                'status' => 403
+            ];
+        }
+
+        // Normal kullanıcı sadece normal kullanıcı rolüne geçebilir
+        if (!$currentUser->isAdmin() && $newRole->name !== 'user') {
+            return [
+                'success' => false,
+                'message' => 'Sadece normal kullanıcı rolüne geçiş yapabilirsiniz.',
+                'status' => 403
+            ];
+        }
         
         // Rol değiştirme işlemi
         $targetUser->role_id = $newRoleId;
@@ -58,7 +84,11 @@ class RoleService
                 'id' => $targetUser->id,
                 'name' => $targetUser->name,
                 'email' => $targetUser->email,
-                'role' => $targetUser->role->name,
+                'role' => [
+                    'id' => $targetUser->role->id,
+                    'name' => $targetUser->role->name
+                ],
+                'created_at' => $targetUser->created_at->format('Y-m-d H:i:s')
             ]
         ];
     }
