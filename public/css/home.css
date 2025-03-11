@@ -1,0 +1,159 @@
+.movie-overlay {
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.movie-card:hover .movie-overlay {
+    opacity: 1;
+}
+
+.cinema-icon {
+    transition: all 0.3s ease;
+}
+
+.cinema-card:hover .cinema-icon {
+    transform: scale(1.1) rotate(10deg);
+}
+
+.feature-icon {
+    transition: all 0.3s ease;
+}
+
+.feature-card:hover .feature-icon {
+    transform: scale(1.1);
+}
+
+.showtime-row {
+    transition: all 0.3s ease;
+}
+
+.hero-section {
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at top right, rgba(229, 9, 20, 0.3), transparent 50%);
+    z-index: 1;
+}
+
+.hero-section::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at bottom left, rgba(229, 9, 20, 0.2), transparent 50%);
+    z-index: 1;
+}
+
+.table {
+    --bs-table-hover-color: var(--light);
+    --bs-table-hover-bg: rgba(255, 255, 255, 0.05);
+}
+
+.table tbody tr {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.table thead th {
+    border-bottom: 2px solid var(--border-color);
+    padding: 1rem 0.75rem;
+    font-weight: 600;
+    color: var(--light);
+}
+
+.badge {
+    letter-spacing: 0.5px;
+}
+
+.btn {
+    letter-spacing: 0.5px;
+    font-weight: 500;
+}
+
+.card {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.rounded-4 {
+    border-radius: 1rem !important;
+}
+
+.rounded-pill {
+    border-radius: 50rem !important;
+}
+
+.text-muted {
+    color: var(--text-muted) !important;
+}
+
+.text-light {
+    color: var(--light) !important;
+}
+
+.text-white {
+    color: white !important;
+}
+
+.swiper-button-next, .swiper-button-prev {
+    background-color: rgba(0, 0, 0, 0.5);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    color: white;
+}
+
+.swiper-button-next:after, .swiper-button-prev:after {
+    font-size: 1.2rem;
+}
+
+.swiper-pagination-bullet {
+    width: 10px;
+    height: 10px;
+}
+
+.movie-card .card-footer, .cinema-card .card-footer {
+    border-top: 1px solid var(--border-color);
+}
+
+.form-control::placeholder {
+    color: var(--text-muted);
+    opacity: 0.7;
+}
+
+.form-control:focus {
+    box-shadow: 0 0 0 0.25rem rgba(229, 9, 20, 0.25);
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.pulse {
+    animation: pulse 2s infinite;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translate3d(0, 30px, 0);
+    }
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+.fadeInUp {
+    animation: fadeInUp 0.5s ease-out;
+} 

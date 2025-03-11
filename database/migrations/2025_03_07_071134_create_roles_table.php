@@ -15,7 +15,6 @@ class CreateRolesTable extends Migration
             $table->timestamps();
         });
         
-        // Roles tablosuna varsayılan rolleri ekleyelim
         DB::table('roles')->insert([
             ['name' => 'user', 'description' => 'Normal kullanıcı', 'created_at' => now(), 'updated_at' => now()],
             ['name' => 'admin', 'description' => 'Yönetici', 'created_at' => now(), 'updated_at' => now()],

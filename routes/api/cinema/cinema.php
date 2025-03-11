@@ -16,3 +16,4 @@ Route::prefix('cinemas')->group(function () {
         Route::post('/cinema-delete/{id}', [CinemaController::class, 'destroy'])->name('cinema-delete'); 
     });
 });
+

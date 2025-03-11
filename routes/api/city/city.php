@@ -9,3 +9,10 @@ Route::prefix('cities')->middleware('auth')->group(function () {
     Route::get('/{id}', [CityController::class, 'show']); 
 });
 
+
+Route::prefix('cities-user')->group(function () {
+    Route::get('/', [CityController::class, 'index']); 
+    Route::get('/{id}', [CityController::class, 'show']); 
+});
+
+

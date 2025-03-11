@@ -15,7 +15,7 @@ class AuthService
      */
     public function register(array $data): User
     {
-        $role_id = 1; // Varsayılan kullanıcı rolü
+        $role_id = 1; 
         
         $user = User::create([
             'name' => $data['name'],

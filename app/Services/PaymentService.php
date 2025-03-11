@@ -153,9 +153,32 @@ class PaymentService
      */
     private function updateTicketStatus(int $ticketId, string $status): void
     {
+        $ticket = $this->ticketRepository->findById($ticketId);
+        if (!$ticket) {
+            return;
+        }
+        
+        // Bilet durumunu güncelle
         $this->ticketRepository->update($ticketId, [
             'status' => $status
         ]);
+        
+        // Eğer bilet onaylandıysa, koltuk durumunu da güncelle
+        if ($status === 'confirmed') {
+            $showtime = $ticket->showtime;
+            if ($showtime) {
+                $seatStatus = json_decode($showtime->seat_status, true) ?: [];
+                
+                // Koltuk durumunu 'reserved' ise 'sold' olarak güncelle
+                if (isset($seatStatus[$ticket->seat_number]) && $seatStatus[$ticket->seat_number] === 'reserved') {
+                    $seatStatus[$ticket->seat_number] = 'sold';
+                    
+                    // Seans bilgilerini güncelle
+                    $showtime->seat_status = '"' . addslashes(json_encode($seatStatus)) . '"';
+                    $showtime->save();
+                }
+            }
+        }
     }
 
     /**
