@@ -201,7 +201,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     $(document).ready(function() {
-        // DataTables başlatma
         const recentTicketsTable = $('#recentTicketsTable').DataTable({
             processing: true,
             serverSide: true,
@@ -280,7 +279,6 @@
             }
         });
 
-        // İstatistikleri yükle
         function loadStatistics() {
             $.ajax({
                 url: '/api/dashboard/statistics',
@@ -306,7 +304,6 @@
             });
         }
 
-        // Popüler filmleri yükle ve grafiği oluştur
         function loadPopularMovies() {
             $.ajax({
                 url: '/api/dashboard/popular-movies',
@@ -321,7 +318,6 @@
                         createPopularMoviesChart(movies);
                     } else {
                         console.error('Popüler filmler verisi alınamadı:', response);
-                        // Örnek veri ile grafik oluştur
                         const exampleMovies = [
                             {id: 1, title: 'Inception', ticket_count: 25},
                             {id: 2, title: 'The Dark Knight', ticket_count: 20},
@@ -338,7 +334,6 @@
                         localStorage.removeItem('token');
                         window.location.href = '/login';
                     } else {
-                        // Örnek veri ile grafik oluştur
                         const exampleMovies = [
                             {id: 1, title: 'Inception', ticket_count: 25},
                             {id: 2, title: 'The Dark Knight', ticket_count: 20},
@@ -352,7 +347,6 @@
             });
         }
 
-        // Bilet satışlarını yükle ve grafiği oluştur
         function loadTicketSales() {
             $.ajax({
                 url: '/api/dashboard/ticket-sales',
@@ -367,7 +361,6 @@
                         createTicketSalesChart(data.months, data.counts);
                     } else {
                         console.error('Bilet satışları verisi alınamadı:', response);
-                        // Örnek veri ile grafik oluştur
                         const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
                         const counts = [15, 20, 25, 30, 35, 40, 45, 50, 45, 40, 35, 30];
                         createTicketSalesChart(months, counts);
@@ -379,7 +372,6 @@
                         localStorage.removeItem('token');
                         window.location.href = '/login';
                     } else {
-                        // Örnek veri ile grafik oluştur
                         const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
                         const counts = [15, 20, 25, 30, 35, 40, 45, 50, 45, 40, 35, 30];
                         createTicketSalesChart(months, counts);
@@ -388,11 +380,9 @@
             });
         }
 
-        // Popüler filmler grafiği oluştur
         function createPopularMoviesChart(movies) {
             const ctx = document.getElementById('popularMoviesChart').getContext('2d');
             
-            // Eğer zaten bir grafik varsa, onu yok et
             if (window.popularMoviesChart && typeof window.popularMoviesChart.destroy === 'function') {
                 window.popularMoviesChart.destroy();
             }
@@ -439,11 +429,9 @@
             });
         }
 
-        // Bilet satışları grafiği oluştur
         function createTicketSalesChart(months, counts) {
             const ctx = document.getElementById('ticketSalesChart').getContext('2d');
             
-            // Eğer zaten bir grafik varsa, onu yok et
             if (window.ticketSalesChart && typeof window.ticketSalesChart.destroy === 'function') {
                 window.ticketSalesChart.destroy();
             }
@@ -483,12 +471,10 @@
             });
         }
 
-        // Para formatı
         function formatCurrency(amount) {
             return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount);
         }
 
-        // Yenileme butonları
         $('#refreshRecentTickets').on('click', function(e) {
             e.preventDefault();
             recentTicketsTable.ajax.reload();
@@ -509,10 +495,8 @@
             loadTicketSales();
         });
 
-        // Sayfa yüklendiğinde verileri yükle
         loadStatistics();
         
-        // Grafikleri sırayla yükle (zaman aralıklı olarak)
         setTimeout(function() {
             loadPopularMovies();
         }, 500);

@@ -187,7 +187,6 @@ class MovieController extends Controller
 {
     $query = Movie::query();
 
-    // Arama filtreleri
     if ($request->has('title') && $request->title) {
         $query->where('title', 'like', '%' . $request->title . '%');
     }

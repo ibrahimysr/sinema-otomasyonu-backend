@@ -90,7 +90,6 @@ class MovieRepository
     {
         $count = 0;
         foreach ($moviesData as $movieData) {
-            // IMDb ID'si zaten varsa, güncelle
             $movie = $this->findByImdbId($movieData['imdb_id']);
             if ($movie) {
                 $movie->update($movieData);

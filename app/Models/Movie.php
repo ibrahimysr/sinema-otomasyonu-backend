@@ -51,7 +51,6 @@ class Movie extends Model
             return null;
         }
 
-        // Eğer URL tam değilse (http veya https ile başlamıyorsa), OMDB poster URL'sini kullan
         if (!str_starts_with($value, 'http')) {
             return "https://img.omdbapi.com/?i={$this->imdb_id}&apikey=4ad67668&h=600";
         }

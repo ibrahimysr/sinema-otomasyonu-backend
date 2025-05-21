@@ -120,19 +120,15 @@ class MovieService
                 continue;
             }
             
-            // Film detaylarını getir
             $movieDetails = $this->omdbApiService->getMovieDetails($imdbId);
             
             if ($movieDetails['success']) {
-                // Veritabanında bu IMDb ID'li film var mı kontrol et
                 $existingMovie = $this->movieRepository->findByImdbId($imdbId);
                 
                 if ($existingMovie) {
-                    // Film zaten var, güncelle
                     $existingMovie->update($movieDetails['data']);
                     $movies[] = $existingMovie->fresh();
                 } else {
-                    // Yeni film oluştur
                     $movie = $this->movieRepository->create($movieDetails['data']);
                     $movies[] = $movie;
                     $importedCount++;

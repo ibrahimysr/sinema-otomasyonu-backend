@@ -27,14 +27,11 @@ class ShowtimeSeeder extends Seeder
             return;
         }
 
-        // Foreign key kontrollerini geçici olarak devre dışı bırak
         DB::statement('SET FOREIGN_KEY_CHECKS=0;');
         
-        // Mevcut seansları temizle
         Showtime::query()->delete();
         
-        // Foreign key kontrollerini tekrar etkinleştir
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        DB::statement(query: 'SET FOREIGN_KEY_CHECKS=1;');
 
         foreach ($halls as $hall) {
             // Salonun koltuk verilerini al

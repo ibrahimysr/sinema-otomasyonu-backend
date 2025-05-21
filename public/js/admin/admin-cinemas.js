@@ -1,3 +1,19 @@
+let cinemaMap = null;
+let cinemaMarker = null;
+const defaultLocation = [41.0082, 28.9784]; 
+const defaultZoom = 13;
+
+const defaultIcon = L.icon({
+    iconUrl: '/images/leaflet/marker-icon.png',
+    shadowUrl: '/images/leaflet/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+});
+
+L.Marker.prototype.options.icon = defaultIcon;
+
 $(document).ready(function() {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -6,7 +22,7 @@ $(document).ready(function() {
     }
 
     loadCities();
-
+    
     const table = $('#cinemasTable').DataTable({
         processing: true,
         serverSide: true,
@@ -45,7 +61,7 @@ $(document).ready(function() {
             { data: 'actions', name: 'actions', orderable: false, searchable: false }
         ],
         language: {
-            url: '/js/i18n/tr.json' // Yerel Türkçe dil dosyası
+            url: '/js/i18n/tr.json' 
         },
         drawCallback: function() {
             $('#cinemasTable tbody tr').addClass('animate__animated animate__fadeIn');
@@ -86,7 +102,6 @@ $(document).ready(function() {
         updateCinema();
     });
 
-    // Sinema silme onayı
     $('#confirmDeleteBtn').on('click', function() {
         deleteCinema();
     });
@@ -286,22 +301,109 @@ function handleAjaxError(xhr) {
     if (xhr.status === 401) {
         localStorage.removeItem('token');
         window.location.href = '/login';
-        return;
-    }
-    const errors = xhr.responseJSON?.errors;
-    if (errors) {
-        Object.keys(errors).forEach(key => {
-            Swal.fire({
-                icon: 'error',
-                title: 'Hata!',
-                text: errors[key][0]
-            });
-        });
     } else {
         Swal.fire({
             icon: 'error',
             title: 'Hata!',
-            text: 'Bir hata oluştu: ' + xhr.statusText
+            text: 'İşlem sırasında bir hata oluştu: ' + (xhr.responseJSON?.message || xhr.statusText)
         });
     }
 }
+function initCinemaMap() {
+    try {
+        $('#cinemaLocationMap').html('<div class="map-loading"><i class="fas fa-spinner fa-spin me-2"></i> Harita yükleniyor...</div>');
+
+        if (cinemaMap) {
+            cinemaMap.remove();
+            cinemaMap = null;
+        }
+
+        cinemaMap = L.map('cinemaLocationMap', {
+            zoomControl: true,
+            scrollWheelZoom: false,
+            dragging: true,
+            maxBounds: [[-90, -180], [90, 180]], 
+            maxBoundsViscosity: 1.0
+        }).setView(defaultLocation, defaultZoom);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19,
+            minZoom: 3
+        }).addTo(cinemaMap);
+
+        $('.map-loading').remove();
+        updateMapLocation();
+
+        cinemaMap.on('click', function(e) {
+            const lat = e.latlng.lat.toFixed(6);
+            const lng = e.latlng.lng.toFixed(6);
+            $('#edit_latitude').val(lat);
+            $('#edit_longitude').val(lng);
+            updateMapLocation();
+        });
+
+       
+        setTimeout(function() {
+            cinemaMap.invalidateSize(true);
+            
+            // Ek güvenlik için 200ms sonra tekrar boyutlandır
+            setTimeout(function() {
+              cinemaMap.invalidateSize(true);
+            }, 200);
+          }, 500);
+        } catch (error) {
+        console.error("Harita yüklenirken hata oluştu:", error);
+        $('#cinemaLocationMap').html('<div class="alert alert-danger">Harita yüklenirken bir hata oluştu.</div>');
+    }
+}
+
+function updateMapLocation() {
+    const lat = parseFloat($('#edit_latitude').val());
+    const lng = parseFloat($('#edit_longitude').val());
+    
+    if (!isNaN(lat) && !isNaN(lng)) {
+        cinemaMap.setView([lat, lng], defaultZoom);
+        
+        if (cinemaMarker) {
+            cinemaMarker.setLatLng([lat, lng]);
+        } else {
+            cinemaMarker = L.marker([lat, lng], {icon: defaultIcon}).addTo(cinemaMap);
+        }
+    } else {
+        cinemaMap.setView(defaultLocation, defaultZoom);
+        
+        if (cinemaMarker) {
+            cinemaMap.removeLayer(cinemaMarker);
+            cinemaMarker = null;
+        }
+    }
+}
+
+$(document).on('change keyup', '#edit_latitude, #edit_longitude', function() {
+    if (cinemaMap) {
+        updateMapLocation();
+    }
+});
+
+$('#editCinemaModal').on('shown.bs.modal', function() {
+    // Modal tamamen gösterildiğinden emin ol
+    $('#cinemaLocationMap').html('');
+    setTimeout(function() {
+      // Harita konteynerini yeniden boyutlandır
+      $('#cinemaLocationMap').css({
+        'height': '50px', 
+        'width': '50px'
+      });
+      
+      // Haritayı başlat
+      initCinemaMap();
+    }, 500);
+  });
+
+$('#editCinemaModal').on('hidden.bs.modal', function() {
+    if (cinemaMap) {
+        cinemaMap.remove();
+        cinemaMap = null;
+    }
+});

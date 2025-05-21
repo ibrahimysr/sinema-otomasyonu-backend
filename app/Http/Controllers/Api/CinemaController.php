@@ -125,7 +125,7 @@ class CinemaController extends Controller
 
     public function getCinemas(Request $request)
     {
-        $query = Cinema::with('city'); // Şehir ilişkisi varsa
+        $query = Cinema::with('city'); 
 
         if ($request->has('name') && $request->name) {
             $query->where('name', 'like', '%' . $request->name . '%');

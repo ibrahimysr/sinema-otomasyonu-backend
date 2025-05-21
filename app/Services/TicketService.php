@@ -83,23 +83,18 @@ class TicketService
      */
     public function createTicket(array $data): Ticket
     {
-        // Bilet kodu oluştur
         if (!isset($data['ticket_code'])) {
             $data['ticket_code'] = $this->generateTicketCode();
         }
         
-        // Seans bilgisini al
         $showtime = $this->showtimeRepository->findById($data['showtime_id']);
         
-        // Eğer fiyat belirtilmemişse, seans fiyatını kullan
         if (!isset($data['price']) && $showtime) {
             $data['price'] = $showtime->price;
         }
         
-        // Bilet oluştur
         $ticket = $this->ticketRepository->create($data);
         
-        // Seans koltuk durumunu güncelle
         if ($showtime) {
             $this->updateShowtimeSeatStatus($showtime, $data['seat_number'], 'sold');
         }
@@ -118,14 +113,11 @@ class TicketService
     {
         $ticket = $this->ticketRepository->findById($id);
         
-        // Eğer koltuk değişiyorsa, seans koltuk durumunu güncelle
         if ($ticket && isset($data['seat_number']) && $data['seat_number'] !== $ticket->seat_number) {
             $showtime = $ticket->showtime;
             
-            // Eski koltuğu müsait yap
             $this->updateShowtimeSeatStatus($showtime, $ticket->seat_number, 'available');
             
-            // Yeni koltuğu satılmış yap
             $this->updateShowtimeSeatStatus($showtime, $data['seat_number'], 'sold');
         }
         
@@ -187,10 +179,8 @@ class TicketService
         $seatStatus = json_decode($showtime->seat_status, true) ?: [];
         $oldStatus = $seatStatus[$seatNumber] ?? null;
         
-        // Koltuk durumunu güncelle
         $seatStatus[$seatNumber] = $status;
         
-        // Müsait koltuk sayısını güncelle
         $availableSeats = $showtime->available_seats;
         
         if ($oldStatus === 'available' && $status !== 'available') {
@@ -199,7 +189,6 @@ class TicketService
             $availableSeats++;
         }
         
-        // Seansı güncelle
         $this->showtimeRepository->update($showtime->id, [
             'seat_status' => json_encode($seatStatus),
             'available_seats' => $availableSeats,

@@ -124,24 +124,20 @@ class PaymentController extends Controller
     {
         $data = $request->validated();
         
-        // Bilet bilgisini al
         $ticket = $this->ticketService->getTicketById($data['ticket_id']);
         
         if (!$ticket) {
             return $this->responseService->notFound('Bilet bulunamadı.');
         }
         
-        // Eğer bilet zaten onaylanmışsa, hata döndür
         if ($ticket->status === 'confirmed') {
             return $this->responseService->error('Bu bilet zaten onaylanmış.', 400);
         }
         
-        // Eğer bilet iptal edilmişse, hata döndür
         if ($ticket->status === 'cancelled') {
             return $this->responseService->error('Bu bilet iptal edilmiş.', 400);
         }
         
-        // Ödeme oluştur
         $payment = $this->paymentService->createPayment($data);
         
         return $this->responseService->success($payment, 'Ödeme başarıyla oluşturuldu.', 201);

@@ -83,25 +83,20 @@ class PaymentService
      */
     public function createPayment(array $data): Payment
     {
-        // Bilet bilgisini al
         if (isset($data['ticket_id'])) {
             $ticket = $this->ticketRepository->findById($data['ticket_id']);
             
-            // Eğer tutar belirtilmemişse, bilet fiyatını kullan
             if (!isset($data['amount']) && $ticket) {
                 $data['amount'] = $ticket->price;
             }
             
-            // Eğer kullanıcı belirtilmemişse, bilet sahibini kullan
             if (!isset($data['user_id']) && $ticket) {
                 $data['user_id'] = $ticket->user_id;
             }
         }
         
-        // Ödeme oluştur
         $payment = $this->paymentRepository->create($data);
         
-        // Eğer ödeme başarılıysa ve bilet varsa, bilet durumunu güncelle
         if ($payment->status === 'completed' && isset($data['ticket_id'])) {
             $this->updateTicketStatus($data['ticket_id'], 'confirmed');
         }
@@ -120,12 +115,10 @@ class PaymentService
     {
         $payment = $this->paymentRepository->findById($id);
         
-        // Eğer ödeme durumu değişiyorsa ve tamamlandıysa, bilet durumunu güncelle
         if ($payment && isset($data['status']) && $data['status'] === 'completed' && $payment->status !== 'completed') {
             $this->updateTicketStatus($payment->ticket_id, 'confirmed');
         }
         
-        // Eğer ödeme durumu değişiyorsa ve başarısızsa, bilet durumunu güncelle
         if ($payment && isset($data['status']) && $data['status'] === 'failed' && $payment->status !== 'failed') {
             $this->updateTicketStatus($payment->ticket_id, 'reserved');
         }
@@ -158,22 +151,18 @@ class PaymentService
             return;
         }
         
-        // Bilet durumunu güncelle
         $this->ticketRepository->update($ticketId, [
             'status' => $status
         ]);
         
-        // Eğer bilet onaylandıysa, koltuk durumunu da güncelle
         if ($status === 'confirmed') {
             $showtime = $ticket->showtime;
             if ($showtime) {
                 $seatStatus = json_decode($showtime->seat_status, true) ?: [];
                 
-                // Koltuk durumunu 'reserved' ise 'sold' olarak güncelle
                 if (isset($seatStatus[$ticket->seat_number]) && $seatStatus[$ticket->seat_number] === 'reserved') {
                     $seatStatus[$ticket->seat_number] = 'sold';
                     
-                    // Seans bilgilerini güncelle
                     $showtime->seat_status = '"' . addslashes(json_encode($seatStatus)) . '"';
                     $showtime->save();
                 }

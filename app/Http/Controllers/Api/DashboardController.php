@@ -146,10 +146,8 @@ class DashboardController extends Controller
                     </span>';
                 })
                 ->addColumn('occupancy', function ($showtime) {
-                    // Koltuk sayısını salon kapasitesinden al
                     $totalSeats = $showtime->cinemaHall ? $showtime->cinemaHall->capacity : 0;
                     
-                    // Satılan bilet sayısını hesapla
                     $soldTickets = Ticket::where('showtime_id', $showtime->id)->count();
                     
                     if ($totalSeats > 0) {
@@ -177,7 +175,6 @@ class DashboardController extends Controller
         } catch (\Exception $e) {
             \Log::error('Bugünkü seanslar alınırken hata: ' . $e->getMessage());
             
-            // Hata durumunda boş bir DataTables yanıtı döndür
             return DataTables::of(collect([]))
                 ->addColumn('movie', function () { return '-'; })
                 ->addColumn('cinema', function () { return '-'; })
@@ -197,7 +194,6 @@ class DashboardController extends Controller
     public function getPopularMovies(): JsonResponse
     {
         try {
-            // Bilet sayısına göre en popüler 5 filmi getir
             $popularMovies = Movie::select('movies.id', 'movies.title', DB::raw('COUNT(tickets.id) as ticket_count'))
                 ->leftJoin('showtimes', 'movies.id', '=', 'showtimes.movie_id')
                 ->leftJoin('tickets', 'showtimes.id', '=', 'tickets.showtime_id')
@@ -206,7 +202,6 @@ class DashboardController extends Controller
                 ->limit(5)
                 ->get();
             
-            // Eğer veri yoksa örnek veri oluştur
             if ($popularMovies->isEmpty()) {
                 $popularMovies = [
                     ['id' => 1, 'title' => 'Inception', 'ticket_count' => 25],
@@ -223,7 +218,6 @@ class DashboardController extends Controller
         } catch (\Exception $e) {
             \Log::error('Popüler filmler alınırken hata: ' . $e->getMessage());
             
-            // Hata durumunda örnek veri döndür
             $popularMovies = [
                 ['id' => 1, 'title' => 'Inception', 'ticket_count' => 25],
                 ['id' => 2, 'title' => 'The Dark Knight', 'ticket_count' => 20],
@@ -253,7 +247,6 @@ class DashboardController extends Controller
             $months = [];
             $counts = [];
 
-            // Tüm aylar için veri oluştur
             for ($i = 1; $i <= 12; $i++) {
                 $monthName = Carbon::create(null, $i, 1)->format('F');
                 $months[] = $monthName;
@@ -262,7 +255,6 @@ class DashboardController extends Controller
                 $counts[] = $monthData ? $monthData->count : 0;
             }
             
-            // Eğer tüm aylar 0 ise örnek veri oluştur
             $allZeros = true;
             foreach ($counts as $count) {
                 if ($count > 0) {
@@ -286,7 +278,6 @@ class DashboardController extends Controller
         } catch (\Exception $e) {
             \Log::error('Aylık bilet satışları alınırken hata: ' . $e->getMessage());
             
-            // Hata durumunda örnek veri döndür
             $months = [];
             for ($i = 1; $i <= 12; $i++) {
                 $months[] = Carbon::create(null, $i, 1)->format('F');

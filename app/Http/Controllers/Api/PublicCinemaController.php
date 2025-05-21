@@ -34,7 +34,6 @@ class PublicCinemaController extends Controller
         $cinema = Cinema::with(['halls', 'city'])
             ->findOrFail($id);
         
-        // Sinema salonlarına ait aktif seansları getir
         $showtimes = \App\Models\Showtime::with(['movie', 'cinemaHall'])
             ->whereHas('cinemaHall', function($query) use ($id) {
                 $query->where('cinema_id', $id);

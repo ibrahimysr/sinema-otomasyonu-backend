@@ -25,9 +25,8 @@ class UserAuthController extends Controller
             $request->session()->regenerate();
             
             $user = Auth::user();
-            $token = $user->generateApiToken(); // Use your existing method instead of createToken()
+            $token = $user->generateApiToken(); 
             
-            // API yanıtı için JSON döndür
             if ($request->wantsJson()) {
                 return response()->json([
                     'success' => true,
@@ -43,7 +42,6 @@ class UserAuthController extends Controller
                 ]);
             }
             
-            // Web yanıtı için yönlendirme
             return redirect()->intended('/');
         }
     
@@ -87,11 +85,11 @@ class UserAuthController extends Controller
             'name' => $credentials['name'],
             'email' => $credentials['email'],
             'password' => Hash::make($credentials['password']),
-            'role_id' => 1, // Default user role
+            'role_id' => 1, 
         ]);
     
         Auth::login($user);
-        $token = $user->generateApiToken(); // Use generateApiToken instead of createToken
+        $token = $user->generateApiToken(); 
         
         if ($request->wantsJson()) {
             return response()->json([

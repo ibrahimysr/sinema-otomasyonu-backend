@@ -124,24 +124,19 @@ class TicketController extends Controller
     {
         $data = $request->validated();
         
-        // Seans bilgisini al
         $showtime = $this->showtimeService->getShowtimeById($data['showtime_id']);
         
         if (!$showtime) {
             return $this->responseService->notFound('Seans bulunamadı.');
         }
         
-        // Koltuk müsait mi kontrol et
         $seatStatus = json_decode($showtime->seat_status, true) ?: [];
         $seatNumber = $data['seat_number'];
         
-        // Eğer koltuk durumu tanımlı değilse veya müsait değilse, yine de devam et
-        // Sadece uyarı olarak log'a kaydet
         if (!empty($seatStatus) && isset($seatStatus[$seatNumber]) && $seatStatus[$seatNumber] !== 'available') {
             \Log::warning("Müsait olmayan koltuk için bilet oluşturuluyor: Seans ID: {$showtime->id}, Koltuk: {$seatNumber}");
         }
         
-        // Bilet oluştur
         $ticket = $this->ticketService->createTicket($data);
         
         return $this->responseService->success($ticket, 'Bilet başarıyla oluşturuldu.', 201);
@@ -158,7 +153,6 @@ class TicketController extends Controller
     {
         $data = $request->validated();
         
-        // Eğer koltuk değişiyorsa, müsait mi kontrol et
         if (isset($data['seat_number'])) {
             $ticket = $this->ticketService->getTicketById($id);
             
@@ -166,7 +160,6 @@ class TicketController extends Controller
                 return $this->responseService->notFound('Bilet bulunamadı.');
             }
             
-            // Eğer koltuk değişiyorsa ve aynı seans ise kontrol et
             if ($data['seat_number'] !== $ticket->seat_number && 
                 (!isset($data['showtime_id']) || $data['showtime_id'] == $ticket->showtime_id)) {
                 
@@ -174,8 +167,6 @@ class TicketController extends Controller
                 $seatStatus = json_decode($showtime->seat_status, true) ?: [];
                 $seatNumber = $data['seat_number'];
                 
-                // Eğer koltuk durumu tanımlı değilse veya müsait değilse, yine de devam et
-                // Sadece uyarı olarak log'a kaydet
                 if (!empty($seatStatus) && isset($seatStatus[$seatNumber]) && $seatStatus[$seatNumber] !== 'available') {
                     \Log::warning("Müsait olmayan koltuk için bilet güncelleniyor: Bilet ID: {$id}, Seans ID: {$showtime->id}, Koltuk: {$seatNumber}");
                 }

@@ -23,7 +23,6 @@ class PublicShowtimeController extends Controller
         $cinemaId = $request->input('cinema_id');
         $date = $request->input('date');
         
-        // Hata ayıklama için parametreleri logla
         Log::info('Seans sorgusu parametreleri:', [
             'movie_id' => $movieId,
             'cinema_id' => $cinemaId,
@@ -32,19 +31,16 @@ class PublicShowtimeController extends Controller
         
         $query = Showtime::with(['cinemaHall', 'cinemaHall.cinema', 'movie']);
         
-        // Film ID'si varsa filtre uygula
         if ($movieId) {
             $query->where('movie_id', $movieId);
         }
         
-        // Sinema ID'si varsa filtre uygula
         if ($cinemaId) {
             $query->whereHas('cinemaHall', function($q) use ($cinemaId) {
                 $q->where('cinema_id', $cinemaId);
             });
         }
         
-        // Tarih varsa filtre uygula
         if ($date) {
             $startOfDay = Carbon::parse($date)->startOfDay();
             $endOfDay = Carbon::parse($date)->endOfDay();
@@ -54,7 +50,6 @@ class PublicShowtimeController extends Controller
         
         $showtimes = $query->orderBy('start_time')->get();
         
-        // Hata ayıklama için sonuçları logla
         Log::info('Seans sorgusu sonuçları:', [
             'count' => $showtimes->count(),
             'first_showtime' => $showtimes->first()

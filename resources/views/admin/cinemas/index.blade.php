@@ -2,6 +2,81 @@
 
 @section('title', 'Sinemalar')
 
+@section('styles')
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+<style>
+    .leaflet-control-container .leaflet-top {
+        z-index: 1000;
+    }
+    
+    .modal-body {
+        overflow: visible;
+    }
+    
+    .leaflet-popup-content-wrapper {
+        max-width: 200px;
+    }
+    
+    .leaflet-default-icon-path {
+        background-image: url("/images/leaflet/marker-icon.png");
+    }
+    
+    .leaflet-default-shadow-path {
+        background-image: url("/images/leaflet/marker-shadow.png");
+    }
+    
+    .leaflet-marker-icon,
+    .leaflet-marker-shadow {
+        display: block !important;
+    }
+    
+    .modal-dialog.modal-lg {
+        max-width: 800px;
+    }
+    
+    .map-loading {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 1000;
+        background: rgba(255, 255, 255, 0.8);
+        padding: 10px;
+        border-radius: 5px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+  /* Modal içi harita için z-index ayarları */
+.modal-open .modal {
+  z-index: 1050;
+}
+
+.leaflet-control-container {
+  z-index: 800 !important;
+}
+
+/* Harita boyutu düzeltmeleri */
+#cinemaLocationMap {
+  height: 300px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+}
+
+/* Modal içeriği taşma kontrolü */
+.modal-content {
+  overflow: hidden !important;
+}
+
+/* Modal gövdesindeki taşmaları önlemek için */
+.modal-body {
+  overflow: visible !important;
+  position: relative;
+}
+    
+</style>
+@endsection
+
 @section('actions')
 <button type="button" class="btn btn-primary animate__animated animate__fadeInRight" data-bs-toggle="modal" data-bs-target="#addCinemaModal">
     <i class="fas fa-plus"></i> Yeni Sinema Ekle
@@ -230,6 +305,16 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- Harita Görünümü -->
+                    <div class="mb-3">
+                        <label class="form-label">Konum Haritası</label>
+                        <div class="map-container">
+                            <div id="cinemaLocationMap"></div>
+                            <small class="text-muted mt-1 d-block">Enlem ve boylam değerleri değiştiğinde harita otomatik olarak güncellenecektir.</small>
+                        </div>
+                    </div>
+                    
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="edit_total_capacity" class="form-label">Toplam Kapasite</label>
@@ -350,5 +435,7 @@
 @endsection
 
 @section('scripts')
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="/js/admin/admin-cinemas.js"></script>
 @endsection 

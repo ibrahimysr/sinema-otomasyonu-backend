@@ -212,9 +212,8 @@ class SeatService
      */
     private function getSeatPrice(int $row, int $seat, int $seatsInRow, string $hallType): float
     {
-        $basePrice = 50.0; // Temel fiyat
+        $basePrice = 50.0; 
         
-        // Salon tipine göre fiyat artışı
         switch ($hallType) {
             case 'IMAX':
                 $basePrice += 30.0;
