@@ -28,12 +28,7 @@ class AuthController extends Controller
         $this->responseService = $responseService;
     }
 
-    /**
-     * Kullanıcı kaydı oluştur
-     *
-     * @param RegisterRequest $request
-     * @return JsonResponse
-     */
+   
     public function register(RegisterRequest $request): JsonResponse
     {
         $user = $this->authService->register($request->validated());
